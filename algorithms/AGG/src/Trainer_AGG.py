@@ -98,8 +98,6 @@ class Trainer_AGG:
                 logging.info('Train set: Iteration: [{}/{}]\tAccuracy: {}/{} ({:.2f}%)\tLoss: {:.6f}'.format(iteration, self.args.iterations,
                     n_class_corrected, total_samples, 100. * n_class_corrected / total_samples, total_classification_loss / total_samples))
                 self.evaluate(iteration)
-                if self.args.self_test:
-                    self.self_test(iteration)
             
             n_class_corrected = 0
             total_classification_loss = 0
@@ -135,31 +133,6 @@ class Trainer_AGG:
         if self.val_loss_min > val_loss:
             self.val_loss_min = val_loss
             torch.save({'model_state_dict': self.model.state_dict(), 'classifier_state_dict': self.classifier.state_dict()}, self.checkpoint_name + '.pt')
-
-    def self_test(self, n_iter):
-        self.model.eval()
-        self.classifier.eval()
-
-        n_class_corrected = 0
-        total_classification_loss = 0
-        with torch.no_grad():
-            for iteration, (samples, labels, domain_labels) in enumerate(self.test_loader):
-                samples, labels, domain_labels = samples.to(self.device), labels.to(self.device), domain_labels.to(self.device)
-                predicted_classes = self.classifier(self.model(samples))
-                classification_loss = self.criterion(predicted_classes, labels)
-                total_classification_loss += classification_loss.item()
-
-                _, predicted_classes = torch.max(predicted_classes, 1)
-                n_class_corrected += (predicted_classes == labels).sum().item()
-
-        self.writer.add_scalar('Accuracy/test', 100. * n_class_corrected / len(self.test_loader.dataset), n_iter)
-        self.writer.add_scalar('Loss/test', total_classification_loss / len(self.test_loader.dataset), n_iter)
-        logging.info('Self test set: Accuracy: {}/{} ({:.2f}%)'.format(n_class_corrected, len(self.test_loader.dataset), 
-            100. * n_class_corrected / len(self.test_loader.dataset)))
-        
-        self.model.train()
-        # self.model.bn_eval()
-        self.classifier.train()
 
     def test(self):
         checkpoint = torch.load(self.checkpoint_name + '.pt')

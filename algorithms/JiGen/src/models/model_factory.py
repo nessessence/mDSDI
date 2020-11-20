@@ -1,8 +1,8 @@
-from algorithms.AGG.src.models import alexnet
+from algorithms.AGG.src.models import caffenet
 from algorithms.JiGen.src.models import resnet
 
 nets_map = {
-    'alexnet': alexnet.caffenet,
+    'caffenet': caffenet.caffenet,
     'resnet18': resnet.resnet18,
     'resnet50': resnet.resnet50
 }

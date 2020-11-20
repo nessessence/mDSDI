@@ -4,7 +4,6 @@
     "model": "caffenet",
     "dataset": "VLCS",
     "seed_value": 1,
-    "self_test": true,
     "src_data_path": "data/VLCS/Raw images/",
     "src_train_meta_filenames":["data/VLCS/Train val splits/CALTECH_train_kfold.txt",
         "data/VLCS/Train val splits/PASCAL_train_kfold.txt",

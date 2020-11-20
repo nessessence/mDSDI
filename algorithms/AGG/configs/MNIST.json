@@ -1,0 +1,23 @@
+{
+    "exp_name": "MNIST",
+    "algorithm": "AGG",
+    "model": "mnistnet",
+    "feature_dim": 84,
+    "dataset": "MNIST",
+    "seed_value": 1,
+    "src_data_path": "data/colored_MNIST/Raw images/",
+    "src_train_meta_filenames":["data/colored_MNIST/Train val splits/blue_train_kfold.txt",
+        "data/colored_MNIST/Train val splits/green_train_kfold.txt",
+        "data/colored_MNIST/Train val splits/red_train_kfold.txt"],
+    "src_val_meta_filenames": ["data/colored_MNIST/Train val splits/blue_crossval_kfold.txt",
+            "data/colored_MNIST/Train val splits/green_crossval_kfold.txt",
+            "data/colored_MNIST/Train val splits/red_crossval_kfold.txt"],
+    "target_test_meta_filenames": ["data/colored_MNIST/Train val splits/target_orange_test_kfold.txt"],
+    "n_classes": 10,
+    "iterations": 3000,
+    "learning_rate": 0.001,
+    "weight_decay": 1e-4,
+    "momentum": 0.9,
+    "batch_size": 32,
+    "step_eval": 100
+}
