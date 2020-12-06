@@ -1,6 +1,8 @@
 from algorithms.DSDI.src.models import resnet
+from algorithms.DSDI.src.models import mnistnet
 
 nets_map = {
+    'mnistnet': mnistnet.mnistnet,
     'resnet18': resnet.resnet18,
     'resnet50': resnet.resnet50
 }

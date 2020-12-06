@@ -2,7 +2,7 @@
     "exp_name": "MNIST",
     "algorithm": "DSDI",
     "model": "mnistnet",
-    "feature_dim": 84,
+    "feature_dim": 120,
     "dataset": "MNIST",
     "seed_value": 1,
     "src_data_path": "data/colored_MNIST/Raw images/",

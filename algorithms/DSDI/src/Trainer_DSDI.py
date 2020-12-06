@@ -11,6 +11,7 @@ from algorithms.DSDI.src.dataloaders import dataloader_factory
 from algorithms.DSDI.src.models import model_factory
 from torch.optim import lr_scheduler
 from torch.optim.lr_scheduler import StepLR
+import torch.nn.functional as F
 
 class GradReverse(torch.autograd.Function):
     iter_num = 0
@@ -30,13 +31,12 @@ class GradReverse(torch.autograd.Function):
                          - (GradReverse.high - GradReverse.low) + GradReverse.low)
         return -coeff * grad_output
 
-class Domain_Classifier(nn.Module):
+class Domain_Discriminator(nn.Module):
     def __init__(self, feature_dim, domain_classes):
-        super(Domain_Classifier, self).__init__()
+        super(Domain_Discriminator, self).__init__()
         self.class_classifier = nn.Sequential(
             nn.Linear(feature_dim, feature_dim),
             nn.ReLU(),
-            nn.Dropout(0.5),
             nn.Linear(feature_dim, domain_classes)
         )
 
@@ -44,11 +44,23 @@ class Domain_Classifier(nn.Module):
         y = self.class_classifier(GradReverse.apply(di_z))
         return y
 
-class Mask_Domain_Generator(nn.Module):
+class Disentangle_Discriminator(nn.Module):
     def __init__(self, feature_dim):
+        super(Disentangle_Discriminator, self).__init__()
+        self.discriminator = nn.Sequential(
+            nn.Linear((int(feature_dim) * 2), 2)
+        )
+
+    def forward(self, di_z, ds_z):
+        z = torch.cat((di_z, ds_z), dim = 1)
+        y = self.discriminator(GradReverse.apply(z))
+        return y
+
+class Mask_Domain_Generator(nn.Module):
+    def __init__(self, feature_in, feature_out):
         super(Mask_Domain_Generator, self).__init__()
         self.mask_generator = nn.Sequential(
-            nn.Linear(feature_dim, 256),
+            nn.Linear(feature_in, feature_out),
             nn.Sigmoid()
         )
 
@@ -69,12 +81,23 @@ class Mask_Domain_Classifier(nn.Module):
 class Classifier(nn.Module):
     def __init__(self, feature_dim, classes):
         super(Classifier, self).__init__()
-        self.classifier = nn.Linear(feature_dim, classes)
+        self.classifier = nn.Linear(int(feature_dim * 2), classes)
     
     def forward(self, di_z, ds_z):
-        z = torch.cat((di_z, ds_z), dim =1)
+        z = torch.cat((di_z, ds_z), dim = 1)
         y = self.classifier(z)
         return y 
+
+class ZS_Domain_Classifier(nn.Module):
+    def __init__(self, feature_dim, domain_classes):
+        super(ZS_Domain_Classifier, self).__init__()
+        self.class_classifier = nn.Sequential(
+            nn.Linear(feature_dim, domain_classes)
+        )
+
+    def forward(self, ds_z):
+        y = self.class_classifier(ds_z)
+        return y
 
 class Trainer_DSDI:
     def __init__(self, args, device, exp_idx):
@@ -89,11 +112,13 @@ class Trainer_DSDI:
         
         self.model = model_factory.get_model(self.args.model)().to(self.device)
         self.classifier = Classifier(feature_dim = self.args.feature_dim, classes = self.args.n_classes).to(self.device)
-        self.domain_classifier = Domain_Classifier(feature_dim = 256, domain_classes = 3).to(self.device)
-        self.mask_domain_generator = Mask_Domain_Generator(feature_dim = 512).to(self.device)
-        self.mask_domain_classifier = Mask_Domain_Classifier(feature_dim = 256, domain_classes = 3).to(self.device)
+        self.zs_domain_classifier = ZS_Domain_Classifier(feature_dim = self.args.feature_dim, domain_classes = 3).to(self.device)
+        self.domain_discriminator = Domain_Discriminator(feature_dim = self.args.feature_dim, domain_classes = 3).to(self.device)
+        self.mask_domain_generator = Mask_Domain_Generator(feature_in = self.args.feature_dim, feature_out = self.args.feature_dim).to(self.device)
+        self.mask_domain_classifier = Mask_Domain_Classifier(feature_dim = self.args.feature_dim, domain_classes = 3).to(self.device)
+        self.disentangle_discriminator = Disentangle_Discriminator(feature_dim = self.args.feature_dim).to(self.device)
 
-        optimizer = list(self.model.parameters()) + list(self.classifier.parameters()) + list(self.domain_classifier.parameters())
+        optimizer = list(self.model.parameters()) + list(self.classifier.parameters()) + list(self.domain_discriminator.parameters()) + list(self.zs_domain_classifier.parameters()) + list(self.mask_domain_generator.parameters()) + list(self.disentangle_discriminator.parameters())
 
         self.optimizer = torch.optim.SGD(optimizer, lr = self.args.learning_rate, weight_decay = self.args.weight_decay, momentum = self.args.momentum, nesterov = False)
         
@@ -117,14 +142,20 @@ class Trainer_DSDI:
         self.model.train()
         # self.model.bn_eval()
         self.classifier.train()
-        self.domain_classifier.train()
+        self.domain_discriminator.train()
         self.mask_domain_classifier.train()
         self.mask_domain_generator.train()
 
         n_class_corrected = 0
+        n_domain_class_corrected = 0
+        n_mask_domain_class_corrected = 0
+        n_zs_domain_class_corrected = 0
+
         total_classification_loss = 0
         total_dc_loss = 0
         total_maskd_loss = 0
+        total_zsc_loss = 0
+        total_disentangle_loss = 0
         total_samples = 0
         self.train_iter_loaders = []
         for train_loader in self.train_loaders:
@@ -147,21 +178,52 @@ class Trainer_DSDI:
             samples = torch.cat(samples, dim=0).to(self.device)
             labels = torch.cat(labels, dim=0).to(self.device)
             domain_labels = torch.cat(domain_labels, dim=0).to(self.device)    
-                
-            di_z, ds_z = self.model(samples)
-            di_predicted_domain = self.domain_classifier(di_z)
+            
+            z, di_z, ds_z= self.model(samples)
+
+            # Correlation Matrix
+            # mdi_z, ddi_z = torch.mean(di_z, 0), torch.std(di_z, 0)          # Size M
+            # mds_z, dds_z = torch.mean(ds_z, 0), torch.std(ds_z, 0)           # Size N
+
+            # di_z_n = (di_z - mdi_z[None, :]) / ddi_z[None,:]           # BxM
+            # ds_z_n = (ds_z - mds_z[None, :]) / dds_z[None,:]           # BxN
+            # C = di_z_n[:, :, None] * ds_z_n[:,None,:]              # BxMxN
+            # C = torch.mean(C, 0)                               # MxN
+            
+            # target_cr = torch.zeros(C.shape[0], C.shape[1], C.shape[2]).to(self.device)
+            # disentangle_loss = nn.MSELoss()(C, target_cr)
+            # total_disentangle_loss += disentangle_loss.item()
+
+            # Adversarial Training
+            real_dtg = self.disentangle_discriminator(di_z, ds_z)
+            fake_dtg = self.disentangle_discriminator(di_z, ds_z[torch.randperm(ds_z.size()[0])])
+            real_label = torch.zeros(real_dtg.shape[0]).to(self.device, dtype=torch.int64)
+            fake_label = torch.ones(fake_dtg.shape[0]).to(self.device, dtype=torch.int64)
+            rf_dtg = torch.cat((real_dtg, fake_dtg))
+            rf_label = torch.cat((real_label, fake_label))
+            disentangle_loss = self.criterion(rf_dtg, rf_label)
+            total_disentangle_loss += disentangle_loss.item()
+
+            di_predicted_domain = self.domain_discriminator(di_z)
             predicted_domain_di_loss = self.criterion(di_predicted_domain, domain_labels)
             total_dc_loss += predicted_domain_di_loss.item()
             
-            z = torch.cat((di_z, ds_z), dim =1)
+            ds_predicted_classes = self.zs_domain_classifier(ds_z)
+            predicted_domain_ds_loss = self.criterion(ds_predicted_classes, domain_labels)
+            total_zsc_loss += predicted_domain_ds_loss.item()
+
             mask = self.mask_domain_generator(z)
             ds_z = torch.mul(ds_z, mask)
             predicted_classes = self.classifier(di_z, ds_z)
             classification_loss = self.criterion(predicted_classes, labels)
             total_classification_loss += classification_loss.item()
 
-            total_loss = classification_loss + 0.1 * predicted_domain_di_loss
+            total_loss = classification_loss + 0.1 * predicted_domain_di_loss + 0.1 * predicted_domain_ds_loss + 0.1 * disentangle_loss
 
+            _, ds_predicted_classes = torch.max(ds_predicted_classes, 1)
+            n_zs_domain_class_corrected += (ds_predicted_classes == domain_labels).sum().item()
+            _, di_predicted_domain = torch.max(di_predicted_domain, 1)
+            n_domain_class_corrected += (di_predicted_domain == domain_labels).sum().item()
             _, predicted_classes = torch.max(predicted_classes, 1)
             n_class_corrected += (predicted_classes == labels).sum().item()
             total_samples += len(samples)
@@ -171,13 +233,14 @@ class Trainer_DSDI:
             self.optimizer.step()
             self.scheduler.step()
             
-            di_z, ds_z= self.model(samples)
-            z = torch.cat((di_z, ds_z), dim =1)
+            z, di_z, ds_z= self.model(samples)
             mask = self.mask_domain_generator(z)
             mask_predicted_domain = self.mask_domain_classifier(mask)
             predicted_domain_mask_loss = self.criterion(mask_predicted_domain, domain_labels)
             total_maskd_loss += predicted_domain_mask_loss.item()
             
+            _, mask_predicted_domain = torch.max(mask_predicted_domain, 1)
+            n_mask_domain_class_corrected += (mask_predicted_domain == domain_labels).sum().item()
             self.mask_optimizer.zero_grad()
             predicted_domain_mask_loss.backward()
             self.mask_optimizer.step()
@@ -185,25 +248,34 @@ class Trainer_DSDI:
 
             if iteration % self.args.step_eval == 0:
                 self.writer.add_scalar('Accuracy/train', 100. * n_class_corrected / total_samples, iteration)
+                self.writer.add_scalar('Accuracy/domainAT_train', 100. * n_domain_class_corrected / total_samples, iteration)
+                self.writer.add_scalar('Accuracy/domainMask_train', 100. * n_mask_domain_class_corrected / total_samples, iteration)
+                self.writer.add_scalar('Accuracy/domainZS_train', 100. * n_zs_domain_class_corrected / total_samples, iteration)
                 self.writer.add_scalar('Loss/train', total_classification_loss / total_samples, iteration)
                 self.writer.add_scalar('Loss/domainAT_train', total_dc_loss / total_samples, iteration)
                 self.writer.add_scalar('Loss/domainMask_train', total_maskd_loss / total_samples, iteration)
+                self.writer.add_scalar('Loss/domainZS_train', total_zsc_loss / total_samples, iteration)
+                self.writer.add_scalar('Loss/disentangle', total_disentangle_loss / total_samples, iteration)
                 logging.info('Train set: Iteration: [{}/{}]\tAccuracy: {}/{} ({:.2f}%)\tLoss: {:.6f}'.format(iteration, self.args.iterations,
                     n_class_corrected, total_samples, 100. * n_class_corrected / total_samples, total_classification_loss / total_samples))
                 self.evaluate(iteration)
-                if self.args.self_test:
-                    self.self_test(iteration)
                 
             n_class_corrected = 0
+            n_domain_class_corrected = 0
+            n_mask_domain_class_corrected = 0
+            n_zs_domain_class_corrected = 0
+
             total_dc_loss = 0
             total_classification_loss = 0
             total_maskd_loss = 0
+            total_zsc_loss = 0
+            total_disentangle_loss = 0
             total_samples = 0
     
     def evaluate(self, n_iter):
         self.model.eval()
         self.classifier.eval()
-        self.domain_classifier.eval()
+        self.domain_discriminator.eval()
         self.mask_domain_classifier.eval()
         self.mask_domain_generator.eval()
 
@@ -212,8 +284,7 @@ class Trainer_DSDI:
         with torch.no_grad():
             for iteration, (samples, labels, domain_labels) in enumerate(self.val_loader):
                 samples, labels, domain_labels = samples.to(self.device), labels.to(self.device), domain_labels.to(self.device)
-                di_z, ds_z = self.model(samples)
-                z = torch.cat((di_z, ds_z), dim =1)
+                z, di_z, ds_z = self.model(samples)
                 mask = self.mask_domain_generator(z)
                 ds_z = torch.mul(ds_z, mask)
 
@@ -234,7 +305,7 @@ class Trainer_DSDI:
         self.model.train()
         # self.model.bn_eval()
         self.classifier.train()
-        self.domain_classifier.train()
+        self.domain_discriminator.train()
         self.mask_domain_classifier.train()
         self.mask_domain_generator.train()
 
@@ -242,59 +313,22 @@ class Trainer_DSDI:
             self.val_loss_min = val_loss
             torch.save({'model_state_dict': self.model.state_dict(),
                 'classifier_state_dict': self.classifier.state_dict(),
-                'domain_classifier_state_dict': self.domain_classifier.state_dict(),
+                'domain_discriminator_state_dict': self.domain_discriminator.state_dict(),
                 'mask_domain_classifier_state_dict': self.mask_domain_classifier.state_dict(),
                 'mask_domain_generator_state_dict': self.mask_domain_generator.state_dict(),
                 }, self.checkpoint_name + '.pt')
-    
-    def self_test(self, n_iter):
-        self.model.eval()
-        self.classifier.eval()
-        self.domain_classifier.eval()
-        self.mask_domain_classifier.eval()
-        self.mask_domain_generator.eval()
-
-        n_class_corrected = 0
-        total_classification_loss = 0
-        with torch.no_grad():
-            for iteration, (samples, labels, domain_labels) in enumerate(self.test_loader):
-                samples, labels, domain_labels = samples.to(self.device), labels.to(self.device), domain_labels.to(self.device)
-                di_z, ds_z = self.model(samples)
-                z = torch.cat((di_z, ds_z), dim =1)
-                mask = self.mask_domain_generator(z)
-                ds_z = torch.mul(ds_z, mask)
-
-                predicted_classes = self.classifier(di_z, ds_z)
-                
-                classification_loss = self.criterion(predicted_classes, labels)
-                total_classification_loss += classification_loss.item()
-
-                _, predicted_classes = torch.max(predicted_classes, 1)
-                n_class_corrected += (predicted_classes == labels).sum().item()
-
-        self.writer.add_scalar('Accuracy/test', 100. * n_class_corrected / len(self.test_loader.dataset), n_iter)
-        self.writer.add_scalar('Loss/test', total_classification_loss / len(self.test_loader.dataset), n_iter)
-        logging.info('Self test set: Accuracy: {}/{} ({:.2f}%)'.format(n_class_corrected, len(self.test_loader.dataset), 
-            100. * n_class_corrected / len(self.test_loader.dataset)))
-        
-        self.model.train()
-        # self.model.bn_eval()
-        self.classifier.train()
-        self.domain_classifier.train()
-        self.mask_domain_classifier.train()
-        self.mask_domain_generator.train()
     
     def test(self):
         checkpoint = torch.load(self.checkpoint_name + '.pt')
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.classifier.load_state_dict(checkpoint['classifier_state_dict'])
-        self.domain_classifier.load_state_dict(checkpoint['domain_classifier_state_dict'])
+        self.domain_discriminator.load_state_dict(checkpoint['domain_discriminator_state_dict'])
         self.mask_domain_classifier.load_state_dict(checkpoint['mask_domain_classifier_state_dict'])
         self.mask_domain_generator.load_state_dict(checkpoint['mask_domain_generator_state_dict'])
         
         self.model.eval()
         self.classifier.eval()
-        self.domain_classifier.eval()
+        self.domain_discriminator.eval()
         self.mask_domain_classifier.eval()
         self.mask_domain_generator.eval()
 
@@ -302,8 +336,7 @@ class Trainer_DSDI:
         with torch.no_grad():
             for iteration, (samples, labels, domain_labels) in enumerate(self.test_loader):
                 samples, labels, domain_labels = samples.to(self.device), labels.to(self.device), domain_labels.to(self.device)
-                di_z, ds_z = self.model(samples)
-                z = torch.cat((di_z, ds_z), dim =1)
+                z, di_z, ds_z = self.model(samples)
                 mask = self.mask_domain_generator(z)
                 ds_z = torch.mul(ds_z, mask)
                 
