@@ -1,5 +1,5 @@
 for i in {1..1}; do
-    python main.py --config "algorithms/DSDI/configs/MNIST.json" --exp_idx $i
+    python main.py --config "algorithms/DSDI/configs/PACS_art.json" --exp_idx $i
 done
 
-# tensorboard --logdir=/home/ubuntu/DSDI/algorithms/DSDI/results/tensorboards/MNIST_1
+# tensorboard --logdir=/home/DSDI/algorithms/DSDI/results/tensorboards/PACS_art_1

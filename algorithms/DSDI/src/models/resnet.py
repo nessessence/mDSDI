@@ -106,6 +106,8 @@ class ResNet(nn.Module):
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
 
+        # return x
+
         di_z = self.di_z_fc(x)
         ds_z = self.ds_z_fc(x)
 
