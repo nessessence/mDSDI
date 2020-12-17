@@ -3,3 +3,4 @@ pretrained_models/
 *.log
 *.pt
 *.0
+*.png

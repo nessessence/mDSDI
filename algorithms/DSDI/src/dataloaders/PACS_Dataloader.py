@@ -6,7 +6,7 @@ import torchvision.transforms as transforms
 class PACSDataloader(Dataset):
     def __init__(self, src_path, meta_filenames, domain_label = -1):
         def get_train_transformers():
-            image_size = 222
+            image_size = 224
             min_scale = 0.8
             max_scale = 1.0
             jitter = 0.4
@@ -55,7 +55,7 @@ class PACS_Test_Dataloader(PACSDataloader):
     def __init__(self, *args, **xargs):
         super().__init__(*args, **xargs)
         self._image_transformer = transforms.Compose([
-            transforms.Resize((222, 222)),
+            transforms.Resize((224, 224)),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
         ])
