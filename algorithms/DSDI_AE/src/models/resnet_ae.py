@@ -234,8 +234,6 @@ class ResNetEncoder(nn.Module):
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.ds_z_fc = nn.Linear(512 * block.expansion, 512)
-        self.di_z_fc = nn.Linear(512 * block.expansion, 512)
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
@@ -266,10 +264,8 @@ class ResNetEncoder(nn.Module):
 
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
-        di_z = self.di_z_fc(x)
-        ds_z = self.ds_z_fc(x)
 
-        return x, di_z, ds_z
+        return x
 
 
 class ResNetDecoder(nn.Module):
@@ -288,7 +284,7 @@ class ResNetDecoder(nn.Module):
 
         self.upscale_factor = 8
 
-        self.linear = nn.Linear(latent_dim, self.inplanes * 4 * 4)
+        self.linear = nn.Linear(latent_dim * 2, self.inplanes * 4 * 4)
 
         self.layer1 = self._make_layer(block, 256, layers[0], scale=2)
         self.layer2 = self._make_layer(block, 128, layers[1], scale=2)
@@ -417,18 +413,21 @@ class Resnet_AE(nn.Module):
         self.input_height = input_height
 
         if enc_type not in valid_encoders:
-            self.encoder = resnet18_encoder(first_conv, maxpool1)
+            self.di_encoder = resnet18_encoder(first_conv, maxpool1)
+            self.ds_encoder = resnet18_encoder(first_conv, maxpool1)
             self.decoder = resnet18_decoder(self.latent_dim, self.input_height, first_conv, maxpool1)
         else:
-            self.encoder = valid_encoders[enc_type]['enc'](first_conv, maxpool1)
+            self.di_encoder = valid_encoders[enc_type]['enc'](first_conv, maxpool1)
+            self.ds_encoder = valid_encoders[enc_type]['enc'](first_conv, maxpool1)
             self.decoder = valid_encoders[enc_type]['dec'](self.latent_dim, self.input_height, first_conv, maxpool1)
 
         self.fc = nn.Linear(self.enc_out_dim, self.latent_dim)
 
     def forward(self, x):
-        z, z_i, z_s = self.encoder(x)
+        z_i, z_s = self.di_encoder(x), self.ds_encoder(x)
+        z = torch.cat((z_i, z_s), 1)
         x_hat = self.decoder(z)
-        return z, z_i, z_s, x_hat
+        return z_i, z_s, x_hat
 
 
 def resnet18(pretrained=True, **kwargs):
@@ -438,6 +437,19 @@ def resnet18(pretrained=True, **kwargs):
     """
     model = Resnet_AE()
     if pretrained:
-        model.encoder.load_state_dict(torch.load("pretrained_models/resnet18-5c106cde.pth"), strict = False)
+        model.di_encoder.load_state_dict(torch.load("pretrained_models/resnet18-5c106cde.pth"), strict = False)
+        model.ds_encoder.load_state_dict(torch.load("pretrained_models/resnet18-5c106cde.pth"), strict = False)
+
+    return model
+
+def resnet50(pretrained=True, **kwargs):
+    """Constructs a ResNet-50 model.
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    model = Resnet_AE(enc_type = 'resnet50')
+    if pretrained:
+        model.di_encoder.load_state_dict(torch.load("pretrained_models/resnet50-19c8e357.pth"), strict = False)
+        model.ds_encoder.load_state_dict(torch.load("pretrained_models/resnet18-5c106cde.pth"), strict = False)
 
     return model

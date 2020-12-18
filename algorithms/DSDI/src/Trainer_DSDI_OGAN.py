@@ -123,10 +123,7 @@ class Trainer_DSDI:
         self.val_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, meta_filenames = self.args.src_val_meta_filenames), batch_size = self.args.batch_size, shuffle = True)
         self.test_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, meta_filenames = self.args.target_test_meta_filenames), batch_size = self.args.batch_size, shuffle = True)
         
-        self.z_model = model_factory.get_model(self.args.model)().to(self.device)
-        self.zi_model = model_factory.get_model(self.args.model)().to(self.device)
-        self.zs_model = model_factory.get_model(self.args.model)().to(self.device)
-
+        self.model = model_factory.get_model(self.args.model)().to(self.device)
         self.classifier = Classifier(feature_dim = self.args.feature_dim, classes = self.args.n_classes).to(self.device)
         self.zs_domain_classifier = ZS_Domain_Classifier(feature_dim = self.args.feature_dim, domain_classes = 3).to(self.device)
         self.domain_discriminator = Domain_Discriminator(feature_dim = self.args.feature_dim, domain_classes = 3).to(self.device)
@@ -134,16 +131,18 @@ class Trainer_DSDI:
         self.mask_domain_classifier = Mask_Domain_Classifier(feature_dim = self.args.feature_dim, domain_classes = 3).to(self.device)
         self.disentangle_discriminator = Disentangle_Discriminator(feature_dim = self.args.feature_dim).to(self.device)
 
-        # disentangle_optimizer = list(self.zs_model.parameters()) + list(self.disentangle_discriminator.parameters())
-        # self.disentangle_optimizer = torch.optim.SGD(disentangle_optimizer, lr = self.args.learning_rate, weight_decay = self.args.weight_decay, momentum = self.args.momentum, nesterov = False)
+        self.model.di_z_fc.weight.requires_grad = False
+        self.model.di_z_fc.bias.requires_grad = False
 
-        self.G_optimizer = torch.optim.SGD(self.zs_model.parameters(), lr = self.args.learning_rate, weight_decay = self.args.weight_decay, momentum = self.args.momentum, nesterov = False)
+        self.G_optimizer = torch.optim.SGD(list(filter(lambda p: p.requires_grad, self.model.parameters())), lr = self.args.learning_rate, weight_decay = self.args.weight_decay, momentum = self.args.momentum, nesterov = False)
         self.D_optimizer = torch.optim.SGD(self.disentangle_discriminator.parameters(), lr = self.args.learning_rate, weight_decay = self.args.weight_decay, momentum = self.args.momentum, nesterov = False)
 
-        optimizer = list(self.zi_model.parameters()) + list(self.zs_model.parameters()) + list(self.classifier.parameters()) + list(self.domain_discriminator.parameters()) + list(self.zs_domain_classifier.parameters()) + list(self.z_model.parameters()) + list(self.mask_domain_generator.parameters())
+        for param in self.model.parameters():
+            param.requires_grad = True
+        optimizer = list(self.model.parameters()) + list(self.classifier.parameters()) + list(self.domain_discriminator.parameters()) + list(self.zs_domain_classifier.parameters()) + list(self.mask_domain_generator.parameters())
         self.optimizer = torch.optim.SGD(optimizer, lr = self.args.learning_rate, weight_decay = self.args.weight_decay, momentum = self.args.momentum, nesterov = False)
         
-        mask_optimizer = list(self.z_model.parameters()) + list(self.mask_domain_generator.parameters()) + list(self.mask_domain_classifier.parameters())
+        mask_optimizer = list(self.mask_domain_generator.parameters()) + list(self.mask_domain_classifier.parameters())
         self.mask_optimizer = torch.optim.SGD(mask_optimizer, lr = self.args.learning_rate, weight_decay = self.args.weight_decay, momentum = self.args.momentum, nesterov = False)
 
         self.criterion = nn.CrossEntropyLoss()
@@ -161,10 +160,8 @@ class Trainer_DSDI:
         shutil.rmtree(log_dir)
         return SummaryWriter(log_dir)
 
-    def train(self):
-        self.z_model.train()
-        self.zi_model.train()
-        self.zs_model.train()
+    def train(self):        
+        self.model.train()
         # self.model.bn_eval()
         self.classifier.train()
         self.zs_domain_classifier.train()
@@ -207,7 +204,8 @@ class Trainer_DSDI:
             labels = torch.cat(labels, dim=0).to(self.device)
             domain_labels = torch.cat(domain_labels, dim=0).to(self.device)    
             
-            z, di_z, ds_z = self.z_model(samples), self.zi_model(samples), self.zs_model(samples)
+            z, di_z, ds_z= self.model(samples)
+            
             # Correlation Matrix
             # mdi_z, ddi_z = torch.mean(di_z, 0), torch.std(di_z, 0)          # Size M
             # mds_z, dds_z = torch.mean(ds_z, 0), torch.std(ds_z, 0)           # Size N
@@ -254,7 +252,7 @@ class Trainer_DSDI:
             n_dtg_class_corrected += (torch.round(real_dtg) == real_label).sum().item()
             n_dtg_class_corrected += (torch.round(fake_dtg) == fake_label).sum().item()
 
-            z, di_z, ds_z = self.z_model(samples), self.zi_model(samples), self.zs_model(samples)
+            z, di_z, ds_z= self.model(samples)
             di_predicted_domain = self.domain_discriminator(di_z)
             predicted_domain_di_loss = self.criterion(di_predicted_domain, domain_labels)
             total_dc_loss += predicted_domain_di_loss.item()
@@ -284,7 +282,7 @@ class Trainer_DSDI:
             self.optimizer.step()
             self.scheduler.step()
             
-            z = self.z_model(samples)
+            z, di_z, ds_z= self.model(samples)
             mask = self.mask_domain_generator(z)
             mask_predicted_domain = self.mask_domain_classifier(mask)
             predicted_domain_mask_loss = self.criterion(mask_predicted_domain, domain_labels)
@@ -326,9 +324,7 @@ class Trainer_DSDI:
             total_samples = 0
     
     def evaluate(self, n_iter):
-        self.z_model.eval()
-        self.zi_model.eval()
-        self.zs_model.eval()
+        self.model.eval()
         self.classifier.eval()
         self.zs_domain_classifier.eval()
         self.domain_discriminator.eval()
@@ -341,7 +337,7 @@ class Trainer_DSDI:
         with torch.no_grad():
             for iteration, (samples, labels, domain_labels) in enumerate(self.val_loader):
                 samples, labels, domain_labels = samples.to(self.device), labels.to(self.device), domain_labels.to(self.device)
-                z, di_z, ds_z = self.z_model(samples), self.zi_model(samples), self.zs_model(samples)
+                z, di_z, ds_z = self.model(samples)
                 mask = self.mask_domain_generator(z)
                 ds_z = torch.mul(ds_z, mask)
 
@@ -359,9 +355,7 @@ class Trainer_DSDI:
             100. * n_class_corrected / len(self.val_loader.dataset), total_classification_loss / len(self.val_loader.dataset)))
 
         val_loss = total_classification_loss / len(self.val_loader.dataset)
-        self.z_model.train()
-        self.zi_model.train()
-        self.zs_model.train()
+        self.model.train()
         # self.model.bn_eval()
         self.classifier.train()
         self.zs_domain_classifier.train()
@@ -372,9 +366,7 @@ class Trainer_DSDI:
 
         if self.val_loss_min > val_loss:
             self.val_loss_min = val_loss
-            torch.save({'z_model_state_dict': self.z_model.state_dict(),
-                'zi_model_state_dict': self.zi_model.state_dict(),
-                'zs_model_state_dict': self.zs_model.state_dict(),
+            torch.save({'model_state_dict': self.model.state_dict(),
                 'classifier_state_dict': self.classifier.state_dict(),
                 'zs_domain_classifier_state_dict': self.zs_domain_classifier.state_dict(),
                 'domain_discriminator_state_dict': self.domain_discriminator.state_dict(),
@@ -385,9 +377,7 @@ class Trainer_DSDI:
     
     def test(self):
         checkpoint = torch.load(self.checkpoint_name + '.pt')
-        self.z_model.load_state_dict(checkpoint['z_model_state_dict'])
-        self.zi_model.load_state_dict(checkpoint['zi_model_state_dict'])
-        self.zs_model.load_state_dict(checkpoint['zs_model_state_dict'])
+        self.model.load_state_dict(checkpoint['model_state_dict'])
         self.classifier.load_state_dict(checkpoint['classifier_state_dict'])
         self.zs_domain_classifier.load_state_dict(checkpoint['zs_domain_classifier_state_dict'])
         self.domain_discriminator.load_state_dict(checkpoint['domain_discriminator_state_dict'])
@@ -395,9 +385,7 @@ class Trainer_DSDI:
         self.mask_domain_generator.load_state_dict(checkpoint['mask_domain_generator_state_dict'])
         self.disentangle_discriminator.load_state_dict(checkpoint['disentangle_discriminator_state_dict'])
 
-        self.z_model.eval()
-        self.zi_model.eval()
-        self.zs_model.eval()
+        self.model.eval()
         self.classifier.eval()
         self.zs_domain_classifier.eval()
         self.domain_discriminator.eval()
@@ -409,7 +397,7 @@ class Trainer_DSDI:
         with torch.no_grad():
             for iteration, (samples, labels, domain_labels) in enumerate(self.test_loader):
                 samples, labels, domain_labels = samples.to(self.device), labels.to(self.device), domain_labels.to(self.device)
-                z, di_z, ds_z = self.z_model(samples), self.zi_model(samples), self.zs_model(samples)
+                z, di_z, ds_z = self.model(samples)
                 mask = self.mask_domain_generator(z)
                 ds_z = torch.mul(ds_z, mask)
                 

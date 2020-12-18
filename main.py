@@ -8,6 +8,7 @@ import random
 
 from algorithms.AGG.src.Trainer_AGG import Trainer_AGG
 from algorithms.DSDI.src.Trainer_DSDI import Trainer_DSDI
+from algorithms.DSDI_AE.src.Trainer_DSDI_AE import Trainer_DSDI_AE
 from algorithms.JiGen.src.Trainer_JiGen import Trainer_JiGen
 from algorithms.RSC.src.Trainer_RSC import Trainer_RSC
 
@@ -26,6 +27,7 @@ def set_random_seed(seed_value):
 algorithms_map = {
     'AGG': Trainer_AGG,
     'DSDI': Trainer_DSDI,
+    'DSDI_AE': Trainer_DSDI_AE,
     'JiGen': Trainer_JiGen,
     'RSC': Trainer_RSC
 }
