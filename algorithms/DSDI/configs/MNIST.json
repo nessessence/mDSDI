@@ -1,8 +1,8 @@
 {
     "exp_name": "MNIST",
     "algorithm": "DSDI",
-    "model": "mnistnet",
-    "feature_dim": 196,
+    "model": "resnet18",
+    "feature_dim": 512,
     "dataset": "MNIST",
     "seed_value": 1,
     "src_data_path": "/home/ubuntu/DSDI_data/colored_MNIST/Raw images/",

@@ -6,7 +6,7 @@ import torchvision.transforms as transforms
 class MNISTDataloader(Dataset):
     def __init__(self, src_path, meta_filenames, domain_label = -1):
         self.image_transformer = transforms.Compose([
-            transforms.Resize((28, 28)),
+            transforms.Resize((224, 224)),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
         ])

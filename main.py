@@ -8,6 +8,9 @@ import random
 
 from algorithms.AGG.src.Trainer_AGG import Trainer_AGG
 from algorithms.DSDI.src.Trainer_DSDI import Trainer_DSDI
+from algorithms.DI.src.Trainer_DI import Trainer_DI
+from algorithms.DI_AE.src.Trainer_DI_AE import Trainer_DI_AE
+# from algorithms.DI_AE.src.reconstruct_sample import Trainer_DI_AE
 from algorithms.DSDI_AE.src.Trainer_DSDI_AE import Trainer_DSDI_AE
 from algorithms.JiGen.src.Trainer_JiGen import Trainer_JiGen
 from algorithms.RSC.src.Trainer_RSC import Trainer_RSC
@@ -26,7 +29,9 @@ def set_random_seed(seed_value):
 
 algorithms_map = {
     'AGG': Trainer_AGG,
+    'DI': Trainer_DI,
     'DSDI': Trainer_DSDI,
+    'DI_AE': Trainer_DI_AE,
     'DSDI_AE': Trainer_DSDI_AE,
     'JiGen': Trainer_JiGen,
     'RSC': Trainer_RSC
@@ -46,6 +51,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     trainer = algorithms_map[args.algorithm](args, device, bash_args.exp_idx)
+    # trainer.generate()
     trainer.train()
     trainer.test()
     print("Finished!")

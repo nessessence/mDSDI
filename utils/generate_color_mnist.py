@@ -2,12 +2,12 @@ import gzip
 from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
-import cv2
+# import cv2
 import pandas as pd
 
 image_size = 28
-df_orig_train = pd.read_csv('data/MNIST/mnist_train.csv')
-df_orig_test = pd.read_csv('data/MNIST/mnist_test.csv')
+df_orig_train = pd.read_csv('/home/ubuntu/DSDI_data/MNIST/mnist_train.csv')
+df_orig_test = pd.read_csv('/home/ubuntu/DSDI_data/MNIST/mnist_test.csv')
 
 labels_train = df_orig_train['label']
 df_train_digits = df_orig_train.drop('label', axis=1)

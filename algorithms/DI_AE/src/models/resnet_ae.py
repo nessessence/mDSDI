@@ -284,7 +284,7 @@ class ResNetDecoder(nn.Module):
 
         self.upscale_factor = 8
 
-        self.linear = nn.Linear(latent_dim * 2, self.inplanes * 4 * 4)
+        self.linear = nn.Linear(latent_dim, self.inplanes * 4 * 4)
 
         self.layer1 = self._make_layer(block, 256, layers[0], scale=2)
         self.layer2 = self._make_layer(block, 128, layers[1], scale=2)
@@ -424,11 +424,9 @@ class Resnet_AE(nn.Module):
         self.fc = nn.Linear(self.enc_out_dim, self.latent_dim)
 
     def forward(self, x):
-        z_i, z_s = self.di_encoder(x), self.ds_encoder(x)
-        z_s = torch.zeros(z_s.shape[0], z_s.shape[1]).cuda()
-        z = torch.cat((z_i, z_s), 1)
-        x_hat = self.decoder(z)
-        return z_i, z_s, x_hat
+        z_i = self.di_encoder(x)
+        x_hat = self.decoder(z_i)
+        return z_i, x_hat
 
 
 def resnet18(pretrained=True, **kwargs):
