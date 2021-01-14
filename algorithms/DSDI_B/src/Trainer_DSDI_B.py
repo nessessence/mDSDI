@@ -8,8 +8,8 @@ import pandas as pd
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from algorithms.DSDI.src.dataloaders import dataloader_factory
-from algorithms.DSDI.src.models import model_factory
+from algorithms.DSDI_B.src.dataloaders import dataloader_factory
+from algorithms.DSDI_B.src.models import model_factory
 from torch.optim import lr_scheduler
 from torch.optim.lr_scheduler import StepLR
 import copy
@@ -113,7 +113,7 @@ def set_test_samples_labels(meta_filenames):
         class_labels.extend(data_frame["class_label"])
             
     return sample_paths, class_labels
-class Trainer_DSDI:
+class Trainer_DSDI_B:
     def __init__(self, args, device, exp_idx):
         self.args = args
         self.device = device
@@ -152,7 +152,7 @@ class Trainer_DSDI:
             os.mkdir(log_dir)
         shutil.rmtree(log_dir)
         return SummaryWriter(log_dir)
-                
+
     def train(self):        
         self.zi_model.train()
         self.zs_model.train()
@@ -187,7 +187,7 @@ class Trainer_DSDI:
 
                 samples.append(itr_samples)
                 labels.append(itr_labels)
-                domain_labels.append(itr_domain_labels)     
+                domain_labels.append(itr_domain_labels)
 
             tr_samples = torch.cat(samples, dim=0).to(self.device)
             tr_labels = torch.cat(labels, dim=0).to(self.device)
@@ -292,7 +292,7 @@ class Trainer_DSDI:
                         p.grad.data.add_(1.0 * g_j.data / 3)  
 
                 total_meta_samples += len(mtr_samples)
-                total_meta_samples += len(mte_samples)         
+                total_meta_samples += len(mte_samples)              
 
             total_class_samples = total_samples + total_meta_samples
             self.meta_optimizer.step()

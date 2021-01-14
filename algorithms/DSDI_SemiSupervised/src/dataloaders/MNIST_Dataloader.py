@@ -1,3 +1,4 @@
+import pandas as pd
 from torch.utils.data import Dataset
 from PIL import Image
 import torchvision.transforms as transforms
@@ -5,14 +6,14 @@ import torchvision.transforms as transforms
 class MNISTDataloader(Dataset):
     def __init__(self, src_path, sample_paths, class_labels, domain_label = -1):
         self.image_transformer = transforms.Compose([
-            transforms.Resize((224, 224)),
+            transforms.Resize((32, 32)),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
         ])
         self.src_path = src_path
         self.domain_label = domain_label
         self.sample_paths, self.class_labels = sample_paths, class_labels
-
+        
     def get_image(self, sample_path):
         img = Image.open(sample_path).convert('RGB')
         return self.image_transformer(img)

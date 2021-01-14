@@ -4,6 +4,7 @@ import shutil
 import torch
 import torch.nn as nn
 import numpy as np
+import pandas as pd
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
@@ -22,16 +23,47 @@ class Classifier(nn.Module):
         y = self.classifier(z)
         return y   
 
+def set_tr_val_samples_labels(meta_filenames):
+    sample_tr_paths, class_tr_labels, sample_val_paths, class_val_labels = [], [], [], []
+
+    for idx_domain, meta_filename in enumerate(meta_filenames):
+        column_names = ['filename', 'class_label']
+        data_frame = pd.read_csv(meta_filename, header = None, names = column_names, sep='\s+')
+        data_frame = data_frame.sample(frac=1).reset_index(drop=True)
+
+        split_idx = int(len(data_frame) * 0.9)
+        sample_tr_paths.append(data_frame["filename"][:split_idx])
+        class_tr_labels.append(data_frame["class_label"][:split_idx])
+
+        sample_val_paths.extend(data_frame["filename"][split_idx:])
+        class_val_labels.extend(data_frame["class_label"][split_idx:])
+            
+    return sample_tr_paths, class_tr_labels, sample_val_paths, class_val_labels
+
+def set_test_samples_labels(meta_filenames):
+    sample_paths, class_labels = [], []
+    for idx_domain, meta_filename in enumerate(meta_filenames):
+        column_names = ['filename', 'class_label']
+        data_frame = pd.read_csv(meta_filename, header = None, names = column_names, sep='\s+')
+        sample_paths.extend(data_frame["filename"])
+        class_labels.extend(data_frame["class_label"])
+            
+    return sample_paths, class_labels
+
 class Trainer_AGG:
     def __init__(self, args, device, exp_idx):
         self.args = args
         self.device = device
         self.writer = self.set_writer(log_dir = "algorithms/" + self.args.algorithm + "/results/tensorboards/" + self.args.exp_name + "_" + exp_idx + "/")
-        self.train_loaders = [DataLoader(dataloader_factory.get_train_dataloader(self.args.dataset)(src_path = self.args.src_data_path, meta_filenames = [self.args.src_train_meta_filenames[0]], domain_label = 0), batch_size = self.args.batch_size, shuffle = True),
-            DataLoader(dataloader_factory.get_train_dataloader(self.args.dataset)(src_path = self.args.src_data_path, meta_filenames = [self.args.src_train_meta_filenames[1]], domain_label = 1), batch_size = self.args.batch_size, shuffle = True),
-            DataLoader(dataloader_factory.get_train_dataloader(self.args.dataset)(src_path = self.args.src_data_path, meta_filenames = [self.args.src_train_meta_filenames[2]], domain_label = 2), batch_size = self.args.batch_size, shuffle = True)]
-        self.val_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, meta_filenames = self.args.src_val_meta_filenames), batch_size = self.args.batch_size, shuffle = True)
-        self.test_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, meta_filenames = self.args.target_test_meta_filenames), batch_size = self.args.batch_size, shuffle = True)
+        
+        src_tr_sample_paths, src_tr_class_labels, src_val_sample_paths, src_val_class_labels = set_tr_val_samples_labels(self.args.src_train_meta_filenames)
+        test_sample_paths, test_class_labels = set_test_samples_labels(self.args.target_test_meta_filenames)
+
+        self.train_loaders = [DataLoader(dataloader_factory.get_train_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = src_tr_sample_paths[0], class_labels = src_tr_class_labels[0], domain_label = 0), batch_size = self.args.batch_size, shuffle = True),
+            DataLoader(dataloader_factory.get_train_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = src_tr_sample_paths[1], class_labels = src_tr_class_labels[1], domain_label = 1), batch_size = self.args.batch_size, shuffle = True),
+            DataLoader(dataloader_factory.get_train_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = src_tr_sample_paths[2], class_labels = src_tr_class_labels[2], domain_label = 2), batch_size = self.args.batch_size, shuffle = True)]
+        self.val_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = src_val_sample_paths, class_labels = src_val_class_labels), batch_size = self.args.batch_size, shuffle = True)
+        self.test_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = test_sample_paths, class_labels = test_class_labels), batch_size = self.args.batch_size, shuffle = True)
 
         self.model = model_factory.get_model(self.args.model)().to(self.device)
         self.classifier = Classifier(feature_dim = self.args.feature_dim, classes = self.args.n_classes).to(self.device)
@@ -75,9 +107,14 @@ class Trainer_AGG:
                 labels.append(itr_labels)
                 domain_labels.append(itr_domain_labels)
             
-            samples = torch.cat(samples, dim=0).to(self.device)
-            labels = torch.cat(labels, dim=0).to(self.device)
-            domain_labels = torch.cat(domain_labels, dim=0).to(self.device)
+            samples = torch.cat(samples, dim=0)
+            labels = torch.cat(labels, dim=0)
+            domain_labels = torch.cat(domain_labels, dim=0)
+
+            indexes = torch.randperm(samples.shape[0])
+            samples = samples[indexes].to(self.device)
+            labels = labels[indexes].to(self.device)
+            domain_labels = domain_labels[indexes].to(self.device)
             
             predicted_classes = self.classifier(self.model(samples))
             classification_loss = self.criterion(predicted_classes, labels)

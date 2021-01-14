@@ -1,6 +1,6 @@
 {
     "exp_name": "MNIST",
-    "algorithm": "DSDI",
+    "algorithm": "DSDI_B",
     "model": "resnet18",
     "feature_dim": 512,
     "dataset": "MNIST",

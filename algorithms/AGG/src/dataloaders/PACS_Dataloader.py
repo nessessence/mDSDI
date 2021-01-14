@@ -4,7 +4,7 @@ from PIL import Image
 import torchvision.transforms as transforms
 
 class PACSDataloader(Dataset):
-    def __init__(self, src_path, meta_filenames, domain_label = -1):
+    def __init__(self, src_path, sample_paths, class_labels, domain_label = -1):
         self.image_transformer = transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
@@ -12,17 +12,7 @@ class PACSDataloader(Dataset):
         ])
         self.src_path = src_path
         self.domain_label = domain_label
-        self.sample_paths, self.class_labels = self.set_samples_labels(meta_filenames)
-        
-    def set_samples_labels(self, meta_filenames):
-        sample_paths, class_labels = [], []
-        for idx_domain, meta_filename in enumerate(meta_filenames):
-            column_names = ['filename', 'class_label']
-            data_frame = pd.read_csv(meta_filename, header = None, names = column_names, sep='\s+')
-            sample_paths.extend(data_frame["filename"])
-            class_labels.extend(data_frame["class_label"] - 1)
-            
-        return sample_paths, class_labels
+        self.sample_paths, self.class_labels = sample_paths, class_labels
 
     def get_image(self, sample_path):
         img = Image.open(sample_path).convert('RGB')
@@ -33,7 +23,7 @@ class PACSDataloader(Dataset):
 
     def __getitem__(self, index):
         sample = self.get_image(self.src_path + self.sample_paths[index])
-        class_label = self.class_labels[index]
+        class_label = self.class_labels[index] - 1
         
         return sample, class_label, self.domain_label
 

@@ -1,0 +1,20 @@
+{
+    "exp_name": "MNIST",
+    "algorithm": "DSDI_SemiSupervised",
+    "model": "resnet18",
+    "feature_dim": 512,
+    "dataset": "MNIST",
+    "seed_value": 1,
+    "src_data_path": "/home/ubuntu/DSDI_data/colored_MNIST/Raw images/",
+    "src_train_meta_filenames":["/home/ubuntu/DSDI_data/colored_MNIST/Train val splits/blue_test_kfold.txt",
+        "/home/ubuntu/DSDI_data/colored_MNIST/Train val splits/green_test_kfold.txt",
+        "/home/ubuntu/DSDI_data/colored_MNIST/Train val splits/red_test_kfold.txt"],
+    "target_test_meta_filenames": ["/home/ubuntu/DSDI_data/colored_MNIST/Train val splits/target_orange_test_kfold.txt"],
+    "n_classes": 10,
+    "iterations": 3000,
+    "learning_rate": 0.001,
+    "weight_decay": 1e-4,
+    "momentum": 0.9,
+    "batch_size": 32,
+    "step_eval": 100
+}

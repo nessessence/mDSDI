@@ -8,12 +8,8 @@ import random
 
 from algorithms.AGG.src.Trainer_AGG import Trainer_AGG
 from algorithms.DSDI.src.Trainer_DSDI import Trainer_DSDI
-from algorithms.DI.src.Trainer_DI import Trainer_DI
-from algorithms.DI_AE.src.Trainer_DI_AE import Trainer_DI_AE
-# from algorithms.DI_AE.src.reconstruct_sample import Trainer_DI_AE
-from algorithms.DSDI_AE.src.Trainer_DSDI_AE import Trainer_DSDI_AE
-from algorithms.JiGen.src.Trainer_JiGen import Trainer_JiGen
-from algorithms.RSC.src.Trainer_RSC import Trainer_RSC
+from algorithms.DSDI_B.src.Trainer_DSDI_B import Trainer_DSDI_B
+from algorithms.DSDI_SemiSupervised.src.Trainer_DSDI_SemiSupervised import Trainer_DSDI_SemiSupervised
 
 def set_random_seed(seed_value):
     random.seed(seed_value)
@@ -29,23 +25,22 @@ def set_random_seed(seed_value):
 
 algorithms_map = {
     'AGG': Trainer_AGG,
-    'DI': Trainer_DI,
     'DSDI': Trainer_DSDI,
-    'DI_AE': Trainer_DI_AE,
-    'DSDI_AE': Trainer_DSDI_AE,
-    'JiGen': Trainer_JiGen,
-    'RSC': Trainer_RSC
+    'DSDI_B': Trainer_DSDI_B,
+    'DSDI_SemiSupervised': Trainer_DSDI_SemiSupervised
 }
 
 if __name__ == "__main__":
-    # os.environ["CUDA_VISIBLE_DEVICES"] = "3"
     parser = argparse.ArgumentParser(formatter_class = argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--config", help = "Path to configuration file")
     parser.add_argument("--exp_idx", help = "Index of experiment")
+    parser.add_argument("--gpu_idx", help = "Index of GPU")
     bash_args = parser.parse_args()
     with open(bash_args.config, "r") as inp:
         args = argparse.Namespace(**json.load(inp))
-
+        
+    os.environ["CUDA_VISIBLE_DEVICES"] = bash_args.gpu_idx        
+        
     # set_random_seed(args.seed_value)
     logging.basicConfig(filename = "algorithms/" + args.algorithm + "/results/logs/" + args.exp_name + "_" + bash_args.exp_idx + '.log', filemode = 'w', level = logging.INFO)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
