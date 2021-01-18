@@ -19,7 +19,6 @@ class GradReverse(torch.autograd.Function):
     alpha = 10
     low = 0.0
     high = 1.0
-    max_iter = 3000
 
     @staticmethod
     def forward(ctx, x):
@@ -113,25 +112,29 @@ def set_test_samples_labels(meta_filenames):
         class_labels.extend(data_frame["class_label"])
             
     return sample_paths, class_labels
+
 class Trainer_DSDI_B:
     def __init__(self, args, device, exp_idx):
         self.args = args
         self.device = device
         self.writer = self.set_writer(log_dir = "algorithms/" + self.args.algorithm + "/results/tensorboards/" + self.args.exp_name + "_" + exp_idx + "/")
+        self.checkpoint_name = "algorithms/" + self.args.algorithm + "/results/checkpoints/" + self.args.exp_name + "_" + exp_idx
         src_tr_sample_paths, src_tr_class_labels, src_val_sample_paths, src_val_class_labels = set_tr_val_samples_labels(self.args.src_train_meta_filenames)
         test_sample_paths, test_class_labels = set_test_samples_labels(self.args.target_test_meta_filenames)
 
-        self.train_loaders = [DataLoader(dataloader_factory.get_train_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = src_tr_sample_paths[0], class_labels = src_tr_class_labels[0], domain_label = 0), batch_size = self.args.batch_size, shuffle = True),
-            DataLoader(dataloader_factory.get_train_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = src_tr_sample_paths[1], class_labels = src_tr_class_labels[1], domain_label = 1), batch_size = self.args.batch_size, shuffle = True),
-            DataLoader(dataloader_factory.get_train_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = src_tr_sample_paths[2], class_labels = src_tr_class_labels[2], domain_label = 2), batch_size = self.args.batch_size, shuffle = True)]
+        GradReverse.max_iter = self.args.iterations
+        self.train_loaders = []
+        for i in range(self.args.n_domain_classes):
+            self.train_loaders.append(DataLoader(dataloader_factory.get_train_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = src_tr_sample_paths[i], class_labels = src_tr_class_labels[i], domain_label = i), batch_size = self.args.batch_size, shuffle = True))
+
         self.val_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = src_val_sample_paths, class_labels = src_val_class_labels), batch_size = self.args.batch_size, shuffle = True)
         self.test_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = test_sample_paths, class_labels = test_class_labels), batch_size = self.args.batch_size, shuffle = True)
         self.zi_model = model_factory.get_model(self.args.model)().to(self.device)
         self.zs_model = model_factory.get_model(self.args.model)().to(self.device)
 
         self.classifier = Classifier(feature_dim = self.args.feature_dim, classes = self.args.n_classes).to(self.device)
-        self.zs_domain_classifier = ZS_Domain_Classifier(feature_dim = self.args.feature_dim, domain_classes = 3).to(self.device)
-        self.domain_discriminator = Domain_Discriminator(feature_dim = self.args.feature_dim, domain_classes = 3).to(self.device)
+        self.zs_domain_classifier = ZS_Domain_Classifier(feature_dim = self.args.feature_dim, domain_classes = self.args.n_domain_classes).to(self.device)
+        self.domain_discriminator = Domain_Discriminator(feature_dim = self.args.feature_dim, domain_classes = self.args.n_domain_classes).to(self.device)
         
         optimizer = list(self.zi_model.parameters()) + list(self.zs_model.parameters()) + list(self.classifier.parameters()) + list(self.domain_discriminator.parameters()) + list(self.zs_domain_classifier.parameters())
         self.optimizer = torch.optim.SGD(optimizer, lr = self.args.learning_rate, weight_decay = self.args.weight_decay, momentum = self.args.momentum, nesterov = False)
@@ -144,7 +147,6 @@ class Trainer_DSDI_B:
         self.scheduler = StepLR(self.optimizer, step_size=self.args.iterations * 0.8)
         self.meta_scheduler = StepLR(self.meta_optimizer, step_size=self.args.iterations * 0.8)
 
-        self.checkpoint_name = "algorithms/" + self.args.algorithm + "/results/checkpoints/" + self.args.exp_name + "_" + exp_idx
         self.val_loss_min = np.Inf
 
     def set_writer(self, log_dir):
@@ -270,7 +272,7 @@ class Trainer_DSDI_B:
 
                 for p_tgt, p_src in zip(self_param, inner_param):
                     if p_src.grad is not None:
-                        p_tgt.grad.data.add_(p_src.grad.data / 3)
+                        p_tgt.grad.data.add_(p_src.grad.data / self.args.n_domain_classes)
                         
                 total_classification_loss += inner_obj.item()
 
@@ -289,7 +291,7 @@ class Trainer_DSDI_B:
 
                 for p, g_j in zip(self_param, grad_inner_j):
                     if g_j is not None:
-                        p.grad.data.add_(1.0 * g_j.data / 3)  
+                        p.grad.data.add_(1.0 * g_j.data / self.args.n_domain_classes)  
 
                 total_meta_samples += len(mtr_samples)
                 total_meta_samples += len(mte_samples)              

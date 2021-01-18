@@ -3,13 +3,14 @@ from torch.utils.data import Dataset
 from PIL import Image
 import torchvision.transforms as transforms
 
-class MNISTDataloader(Dataset):
+class FMNISTDataloader(Dataset):
     def __init__(self, src_path, sample_paths, class_labels, domain_label = -1):
         self.image_transformer = transforms.Compose([
             transforms.Resize((28, 28)),
             # transforms.RandomCrop(28, padding = 4),
+            # transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
-            transforms.Normalize([0.1307], [0.3081]),
+            transforms.Normalize([0.2860], [0.3530]),
         ])
         self.src_path = src_path
         self.domain_label = domain_label
@@ -28,11 +29,11 @@ class MNISTDataloader(Dataset):
         
         return sample, class_label, self.domain_label
 
-class MNIST_Test_Dataloader(MNISTDataloader):
+class FMNIST_Test_Dataloader(FMNISTDataloader):
     def __init__(self, *args, **xargs):
         super().__init__(*args, **xargs)
         self.image_transformer = transforms.Compose([
             transforms.Resize((28, 28)),
             transforms.ToTensor(),
-            transforms.Normalize([0.1307], [0.3081]),
+            transforms.Normalize([0.2860], [0.3530]),
         ])

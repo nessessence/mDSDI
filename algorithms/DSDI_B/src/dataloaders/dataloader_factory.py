@@ -1,13 +1,16 @@
 from algorithms.DSDI_B.src.dataloaders.PACS_Dataloader import PACSDataloader, PACS_Test_Dataloader
 from algorithms.DSDI_B.src.dataloaders.MNIST_Dataloader import MNISTDataloader, MNIST_Test_Dataloader
+from algorithms.DSDI_B.src.dataloaders.DomainNet_Dataloader import DomainNetDataloader, DomainNet_Test_Dataloader
 
 train_dataloaders_map = {
     'PACS': PACSDataloader,
+    'DomainNet': DomainNetDataloader,
     'MNIST': MNISTDataloader
 }
 
 test_dataloaders_map = {
     'PACS': PACS_Test_Dataloader,
+    'DomainNet': DomainNet_Test_Dataloader,
     'MNIST': MNIST_Test_Dataloader
 }
 

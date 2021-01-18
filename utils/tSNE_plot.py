@@ -4,11 +4,20 @@ import torch
 from matplotlib import pyplot as plt
 from sklearn.manifold import TSNE
 import pickle
-from SSDG.DGFAS import DG_model, Discriminator
-from dataset_configs import dataset_configs
-from get_loader import get_dataset
 
-def tsne_plot(embedded_features, labels, domain_labels):
+def plot_TNSE(X_2d_tr, X_2d_test, tr_labels, test_labels, label_target_names, filename):
+    colors=['red','green','blue','black','brown','grey','orange','yellow','pink','cyan','magenta']
+    plt.figure(figsize=(16, 16))
+    for i, label in zip(range(len(label_target_names)), label_target_names):
+        plt.scatter(X_2d_tr[tr_labels == i, 0], X_2d_tr[tr_labels == i, 1], c=colors[i], marker='.', label=label)
+
+    for i, label in zip(range(len(label_target_names)), label_target_names):
+        plt.scatter(X_2d_test[test_labels == i, 0], X_2d_test[test_labels == i, 1], c=colors[i], marker='2', label=label)
+
+    plt.legend(loc=2, fontsize = 'x-small')
+    plt.savefig(filename)
+
+def tsne_plot(Zi_out, Zs_out, labels, domain_labels, idx_split):
     def unique(list1):
         unique_list = []
         for x in list1:
@@ -16,67 +25,67 @@ def tsne_plot(embedded_features, labels, domain_labels):
                 unique_list.append(x)
         return unique_list
 
+    Z_out = []
+    for idx in range(len(Zi_out)):
+        Z_out.append(Zi_out[idx] + Zs_out[idx])
+
     labels = np.asarray(labels)
     domain_labels = np.asarray(domain_labels)
-    tsne_model = TSNE(n_components=2, init='pca')
-    X_2d = tsne_model.fit_transform(embedded_features)
-    
+    tr_labels, test_labels = labels[:idx_split], labels[idx_split:]
+    tr_domain_labels, test_domain_labels = domain_labels[:idx_split], domain_labels[idx_split:]
     label_target_names = unique(labels)
     domain_label_target_names = unique(domain_labels)
-    label_target_ids = range(len(label_target_names))
-    domain_label_target_ids = range(len(domain_label_target_names))
-    colors=['red','green','blue','black','brown','grey','orange','yellow','pink','cyan','magenta']
 
-    #Class tSNE
-    plt.figure(figsize=(16, 16))
-    for i, label in zip(label_target_ids, label_target_names):
-        plt.scatter(X_2d[labels == i, 0], X_2d[labels == i, 1], c=colors[i], label=label)
+    tsne_model = TSNE(n_components=2, init='pca')
+    Z_2d = tsne_model.fit_transform(Z_out)
+    Zi_2d = tsne_model.fit_transform(Zi_out)
+    Zs_2d = tsne_model.fit_transform(Zs_out)
 
-    plt.legend(loc=2, fontsize = 'x-small')
-    plt.savefig('class_tSNE.png')
+    Z_2d_tr, Z_2d_test = Z_2d[:idx_split], Z_2d[idx_split:]
+    Zi_2d_tr, Zi_2d_test = Zi_2d[:idx_split], Zi_2d[idx_split:]
+    Zs_2d_tr, Zs_2d_test = Zs_2d[:idx_split], Zs_2d[idx_split:]
+    tr_labels, test_labels = labels[:idx_split], labels[idx_split:]
+    tr_domain_labels, test_domain_labels = domain_labels[:idx_split], domain_labels[idx_split:]
+    
+    plot_TNSE(Z_2d_tr, Z_2d_test, tr_labels, test_labels, label_target_names, 'Z_class_tSNE.png')
+    plot_TNSE(Z_2d_tr, Z_2d_test, tr_domain_labels, test_domain_labels, domain_label_target_names, 'Z_domain_tSNE.png')
 
-    #Domain tSNE
-    plt.figure(figsize=(16, 16))
-    for i, label in zip(domain_label_target_ids, domain_label_target_names):
-        plt.scatter(X_2d[labels == i, 0], X_2d[labels == i, 1], c=colors[i], label=label)
+    plot_TNSE(Zi_2d_tr, Zi_2d_test, tr_labels, test_labels, label_target_names, 'Zi_class_tSNE.png')
+    plot_TNSE(Zi_2d_tr, Zi_2d_test, tr_domain_labels, test_domain_labels, domain_label_target_names, 'Zi_domain_tSNE.png')
 
-    plt.legend(loc=2, fontsize = 'x-small')
-    plt.savefig('domain_tSNE.png')
-
-def get_embedded_train_set(loader, model):
-    X_out, Y_out = [], []
-    for batch_idx, (images, labels, domain_labels, video_ids) in enumerate(loader):
-        psuedo_labels = []
-        for idx, label in enumerate(labels):
-            if label == 0:
-                psuedo_labels.append(0)
-            else:
-                psuedo_labels.append(domain_labels[idx] + 1)
-        labels = torch.Tensor(psuedo_labels)
-        if torch.cuda.is_available():
-            images= images.cuda()
-            labels=labels.cuda()
-        cls_out, feature = model(images, True)
-        X_out += feature.tolist()
-        Y_out += labels.tolist()
-    return X_out, Y_out
+    plot_TNSE(Zs_2d_tr, Zs_2d_test, tr_labels, test_labels, label_target_names, 'Zs_class_tSNE.png')
+    plot_TNSE(Zs_2d_tr, Zs_2d_test, tr_domain_labels, test_domain_labels, domain_label_target_names, 'Zs_domain_tSNE.png')
 
 def main():
-    model = DG_model('resnet18').to('cuda')
-    model.load_state_dict(torch.load("results/checkpoints/resnet18/9999_checkpoint.pt"))
-    model.eval()
-    domain_ids = {}
-    src_train_dataloader_fake, src_train_dataloader_real, validate_loaders, domain_ids['source'], domain_ids['target'] = get_dataset('SSDG', dataset_configs['VinSmart'], [4], 128)
-    X_total, Y_total = [], []
-    with torch.no_grad():
-        X_test, Y_test = get_embedded_train_set(src_train_dataloader_real[0], model)
-        X_total += X_test
-        
-        Y_total, X_total = (list(t) for t in zip(*sorted(zip(Y_total, X_total))))
-        print("Ziped!")
-        # with open("Y_total.pickle", "wb") as fp:
-        #     pickle.dump(Y_total, fp)
-        # with open("X_total.pickle", "wb") as fp:
-        #     pickle.dump(X_total, fp)
-        tsne_plot(X_total,Y_total)
+    with open ('Zi_out', 'rb') as fp:
+        Zi_out = pickle.load(fp)
+    with open ('Zs_out', 'rb') as fp:
+        Zs_out = pickle.load(fp)
+    with open ('Y_out', 'rb') as fp:
+        Y_out = pickle.load(fp)
+    with open ('Y_domain_out', 'rb') as fp:
+        Y_domain_out = pickle.load(fp)
+    
+    # with open ('Zi_test', 'rb') as fp:
+    #     Zi_test = pickle.load(fp)
+    # with open ('Zs_test', 'rb') as fp:
+    #     Zs_test = pickle.load(fp)
+    # with open ('Y_test', 'rb') as fp:
+    #     Y_test = pickle.load(fp)
+    # with open ('Y_domain_test', 'rb') as fp:
+    #     Y_domain_test = pickle.load(fp)
+
+    # for i in range(len(Y_domain_test)):
+    #     Y_domain_test[i] = 3
+
+    # Zi_out += Zi_test
+    # Zs_out += Zs_test
+    # Y_out += Y_test
+    # Y_domain_out += Y_domain_test
+    print(len(Y_out))
+    exit()
+
+    idx_split = len(Zi_out)
+    tsne_plot(Zi_out, Zs_out, Y_out, Y_domain_out, idx_split)
+
 main()

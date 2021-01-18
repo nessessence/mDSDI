@@ -1,6 +1,6 @@
 {
     "exp_name": "MNIST",
-    "algorithm": "DSDI_B",
+    "algorithm": "DSDI",
     "model": "resnet18",
     "feature_dim": 512,
     "dataset": "MNIST",
@@ -11,9 +11,10 @@
         "/home/ubuntu/data/colored_MNIST/Train val splits/red_train_kfold.txt"],
     "target_test_meta_filenames": ["/home/ubuntu/data/colored_MNIST/Train val splits/target_orange_test_kfold.txt"],
     "n_classes": 10,
+    "n_domain_classes": 3,
     "iterations": 3000,
     "learning_rate": 0.001,
-    "weight_decay": 1e-4,
+    "weight_decay": 0.0005,
     "momentum": 0.9,
     "batch_size": 32,
     "step_eval": 100

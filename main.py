@@ -46,7 +46,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     trainer = algorithms_map[args.algorithm](args, device, bash_args.exp_idx)
-    # trainer.generate()
     trainer.train()
     trainer.test()
+    # trainer.save_plot()
     print("Finished!")

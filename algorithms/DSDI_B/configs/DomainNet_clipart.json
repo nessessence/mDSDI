@@ -1,0 +1,23 @@
+{
+    "exp_name": "DomainNet_clipart",
+    "algorithm": "DSDI_B",
+    "model": "resnet50",
+    "feature_dim": 2048,
+    "dataset": "DomainNet",
+    "seed_value": 1,
+    "src_data_path": "/home/ubuntu/data/DomainNet/Raw images/",
+    "src_train_meta_filenames":["/home/ubuntu/data/DomainNet/Train val splits/sketch_train.txt",
+        "/home/ubuntu/data/DomainNet/Train val splits/infograph_train.txt",
+        "/home/ubuntu/data/DomainNet/Train val splits/painting_train.txt",
+        "/home/ubuntu/data/DomainNet/Train val splits/quickdraw_train.txt",
+        "/home/ubuntu/data/DomainNet/Train val splits/real_train.txt"],
+    "target_test_meta_filenames": ["/home/ubuntu/data/DomainNet/Train val splits/clipart_test.txt"],
+    "n_classes": 345,
+    "n_domain_classes": 5,
+    "iterations": 400000,
+    "learning_rate": 0.001,
+    "weight_decay": 0.0005,
+    "momentum": 0.9,
+    "batch_size": 20,
+    "step_eval": 100
+}

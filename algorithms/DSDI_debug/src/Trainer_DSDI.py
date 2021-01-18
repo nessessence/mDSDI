@@ -2,6 +2,7 @@ import os
 import logging
 import shutil
 import torch
+import pickle
 import torch.nn as nn
 import numpy as np
 import pandas as pd
@@ -94,7 +95,7 @@ def set_tr_val_samples_labels(meta_filenames):
         data_frame = pd.read_csv(meta_filename, header = None, names = column_names, sep='\s+')
         data_frame = data_frame.sample(frac=1).reset_index(drop=True)
 
-        split_idx = int(len(data_frame) * 0.9)
+        split_idx = int(len(data_frame) * 1.0)
         sample_tr_paths.append(data_frame["filename"][:split_idx])
         class_tr_labels.append(data_frame["class_label"][:split_idx])
 
@@ -127,7 +128,7 @@ class Trainer_DSDI:
         for i in range(self.args.n_domain_classes):
             self.train_loaders.append(DataLoader(dataloader_factory.get_train_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = src_tr_sample_paths[i], class_labels = src_tr_class_labels[i], domain_label = i), batch_size = self.args.batch_size, shuffle = True))
 
-        self.val_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = src_val_sample_paths, class_labels = src_val_class_labels), batch_size = self.args.batch_size, shuffle = True)
+        self.val_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = test_sample_paths, class_labels = test_class_labels), batch_size = self.args.batch_size, shuffle = True)
         self.test_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = test_sample_paths, class_labels = test_class_labels), batch_size = self.args.batch_size, shuffle = True)
         self.zi_model = model_factory.get_model(self.args.model)().to(self.device)
         self.zs_model = model_factory.get_model(self.args.model)().to(self.device)
@@ -154,6 +155,68 @@ class Trainer_DSDI:
             os.mkdir(log_dir)
         shutil.rmtree(log_dir)
         return SummaryWriter(log_dir)
+
+    def save_plot(self):
+        checkpoint = torch.load(self.checkpoint_name + '.pt')
+        self.zi_model.load_state_dict(checkpoint['zi_model_state_dict'])
+        self.zs_model.load_state_dict(checkpoint['zs_model_state_dict'])
+        self.classifier.load_state_dict(checkpoint['classifier_state_dict'])
+        self.zs_domain_classifier.load_state_dict(checkpoint['zs_domain_classifier_state_dict'])
+        self.domain_discriminator.load_state_dict(checkpoint['domain_discriminator_state_dict'])
+
+        self.zi_model.eval()
+        self.zs_model.eval()
+        self.classifier.eval()
+        self.zs_domain_classifier.eval()
+        self.domain_discriminator.eval()
+
+        Zi_out, Zs_out, Y_out, Y_domain_out = [], [], [], []
+        Zi_test, Zs_test, Y_test, Y_domain_test = [], [], [], []
+
+        with torch.no_grad():
+            self.train_iter_loaders = []
+            for train_loader in self.train_loaders:
+                self.train_iter_loaders.append(iter(train_loader))
+                
+            for d_idx in range(len(self.train_iter_loaders)):
+                train_loader = self.train_iter_loaders[d_idx]
+                for idx in range(len(train_loader)):
+                    samples, labels, domain_labels = train_loader.next()
+                    samples = samples.to(self.device)
+                    labels = labels.to(self.device)
+                    domain_labels = domain_labels.to(self.device)
+                    di_z, ds_z = self.zi_model(samples), self.zs_model(samples)
+                    
+                    Zi_out += di_z.tolist()
+                    Zs_out += ds_z.tolist()   
+                    Y_out += labels.tolist() 
+                    Y_domain_out += domain_labels.tolist()
+
+            for iteration, (samples, labels, domain_labels) in enumerate(self.test_loader):
+                samples, labels = samples.to(self.device), labels.to(self.device)
+                di_z, ds_z = self.zi_model(samples), self.zs_model(samples)
+                Zi_test += di_z.tolist()
+                Zs_test += ds_z.tolist()   
+                Y_test += labels.tolist() 
+                Y_domain_test += domain_labels.tolist()
+        
+        with open('Zi_out', 'wb') as fp:
+            pickle.dump(Zi_out, fp)
+        with open('Zs_out', 'wb') as fp:
+            pickle.dump(Zs_out, fp)
+        with open('Y_out', 'wb') as fp:
+            pickle.dump(Y_out, fp)
+        with open('Y_domain_out', 'wb') as fp:
+            pickle.dump(Y_domain_out, fp)
+
+        with open('Zi_test', 'wb') as fp:
+            pickle.dump(Zi_test, fp)
+        with open('Zs_test', 'wb') as fp:
+            pickle.dump(Zs_test, fp)
+        with open('Y_test', 'wb') as fp:
+            pickle.dump(Y_test, fp)
+        with open('Y_domain_test', 'wb') as fp:
+            pickle.dump(Y_domain_test, fp)
 
     def train(self):        
         self.zi_model.train()
