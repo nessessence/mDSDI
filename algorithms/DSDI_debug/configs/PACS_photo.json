@@ -1,6 +1,6 @@
 {
     "exp_name": "PACS_photo",
-    "algorithm": "DSDI",
+    "algorithm": "DSDI_debug",
     "model": "resnet18",
     "feature_dim": 512,
     "dataset": "PACS",

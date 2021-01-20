@@ -9,6 +9,7 @@ import random
 from algorithms.AGG.src.Trainer_AGG import Trainer_AGG
 from algorithms.DSDI.src.Trainer_DSDI import Trainer_DSDI
 from algorithms.DSDI_B.src.Trainer_DSDI_B import Trainer_DSDI_B
+from algorithms.DSDI_debug.src.Trainer_DSDI_debug import Trainer_DSDI_debug
 
 def set_random_seed(seed_value):
     random.seed(seed_value)
@@ -25,7 +26,8 @@ def set_random_seed(seed_value):
 algorithms_map = {
     'AGG': Trainer_AGG,
     'DSDI': Trainer_DSDI,
-    'DSDI_B': Trainer_DSDI_B
+    'DSDI_B': Trainer_DSDI_B,
+    'DSDI_debug': Trainer_DSDI_debug
 }
 
 if __name__ == "__main__":

@@ -110,7 +110,7 @@ class ResNet(nn.Module):
         return self._forward_impl(x)
 
 
-def resnet18(pretrained=True, **kwargs):
+def resnet18(pretrained=False, **kwargs):
     """Constructs a ResNet-18 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
@@ -121,7 +121,7 @@ def resnet18(pretrained=True, **kwargs):
 
     return model
 
-def resnet50(pretrained=True, **kwargs):
+def resnet50(pretrained=False, **kwargs):
     """Constructs a ResNet-50 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet

@@ -1,6 +1,6 @@
 {
     "exp_name": "OfficeHome_Real",
-    "algorithm": "DSDI",
+    "algorithm": "DSDI_debug",
     "model": "resnet18",
     "feature_dim": 512,
     "dataset": "OfficeHome",

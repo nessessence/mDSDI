@@ -1,6 +1,6 @@
 {
     "exp_name": "DomainNet_sketch",
-    "algorithm": "DSDI",
+    "algorithm": "DSDI_debug",
     "model": "resnet18",
     "feature_dim": 512,
     "dataset": "DomainNet",
@@ -18,6 +18,6 @@
     "learning_rate": 0.001,
     "weight_decay": 0.0005,
     "momentum": 0.9,
-    "batch_size": 32,
-    "step_eval": 5000
+    "batch_size": 40,
+    "step_eval": 100
 }

@@ -65,7 +65,7 @@ lightpink = [255, 182, 193]
 black = [0, 0, 0]
 black = [0, 0, 0]
 darkseagreen = [143, 188, 143]
-target_domain = [dodgerblue, khaki, lawngreen, deeppink, crimson, violet, green, orangered, blue, darkseagreen]
+target_domain = [dodgerblue, khaki, lawngreen, saddlebrown, crimson, darkcyan, green, lightsteelblue, purple2, darkseagreen]
 
 def add_color(grey_img, c1_img, c2_img, c3_img, color):
     #Blue
@@ -76,17 +76,17 @@ def add_color(grey_img, c1_img, c2_img, c3_img, color):
     c3_img[grey_img == 0] = color[0]
     return c1_img, c2_img, c3_img
 
+#Red train
 train_paths = []
 train_labels = []
 
-test_paths = []
-test_labels = []
-
 for index, row in df_train_digits.iterrows():
+    if index > 999:
+        break
     data = df_train_digits.iloc[index].to_numpy()
     label = labels_train[index]
 
-    path = "target_orange/" + str(label) + "/tr_image_" + str(index) + ".png"
+    path = "red/" + str(label) + "/tr_image_" + str(index) + ".png"
     train_paths.append(path)
     train_labels.append(label)
 
@@ -97,10 +97,10 @@ for index, row in df_train_digits.iterrows():
     c3_img = grey_img.copy()
 
     c1_img[grey_img != 0] = 0
-    c2_img[grey_img != 0] = 165
+    c2_img[grey_img != 0] = 0
     c3_img[grey_img != 0] = 255
 
-    c1_img, c2_img, c3_img = add_color(grey_img, c1_img, c2_img, c3_img, target_domain[label])
+    c1_img, c2_img, c3_img = add_color(grey_img, c1_img, c2_img, c3_img, red_domain[label])
 
     rgb_img = np.append(c1_img, c2_img, axis = 2)
     rgb_img = np.append(rgb_img, c3_img, axis = 2)
@@ -109,6 +109,84 @@ for index, row in df_train_digits.iterrows():
 
     cv2.imwrite("/home/ubuntu/data/colored_MNIST/Raw images/" + path, rgb_img)
 
+tr_meta_files = pd.DataFrame({'path': train_paths, 'label': train_labels})
+tr_meta_files.to_csv("/home/ubuntu/data/colored_MNIST/Train val splits/red_train_kfold.txt", header=None, sep=' ', encoding='utf-8', index = False)
+
+#Green train
+train_paths = []
+train_labels = []
+
+for index, row in df_train_digits.iterrows():
+    if index > 999:
+        break
+    data = df_train_digits.iloc[index].to_numpy()
+    label = labels_train[index]
+
+    path = "green/" + str(label) + "/tr_image_" + str(index) + ".png"
+    train_paths.append(path)
+    train_labels.append(label)
+
+    grey_img = data.reshape(image_size, image_size, 1)
+
+    c1_img = grey_img.copy()
+    c2_img = grey_img.copy()
+    c3_img = grey_img.copy()
+
+    c1_img[grey_img != 0] = 0
+    c2_img[grey_img != 0] = 255
+    c3_img[grey_img != 0] = 0
+
+    c1_img, c2_img, c3_img = add_color(grey_img, c1_img, c2_img, c3_img, green_domain[label])
+
+    rgb_img = np.append(c1_img, c2_img, axis = 2)
+    rgb_img = np.append(rgb_img, c3_img, axis = 2)
+
+    rgb_img = rgb_img.astype(np.uint8)
+
+    cv2.imwrite("/home/ubuntu/data/colored_MNIST/Raw images/" + path, rgb_img)
+
+tr_meta_files = pd.DataFrame({'path': train_paths, 'label': train_labels})
+tr_meta_files.to_csv("/home/ubuntu/data/colored_MNIST/Train val splits/green_train_kfold.txt", header=None, sep=' ', encoding='utf-8', index = False)
+
+#Blue train
+train_paths = []
+train_labels = []
+
+for index, row in df_train_digits.iterrows():
+    if index > 999:
+        break
+    data = df_train_digits.iloc[index].to_numpy()
+    label = labels_train[index]
+
+    path = "blue/" + str(label) + "/tr_image_" + str(index) + ".png"
+    train_paths.append(path)
+    train_labels.append(label)
+
+    grey_img = data.reshape(image_size, image_size, 1)
+
+    c1_img = grey_img.copy()
+    c2_img = grey_img.copy()
+    c3_img = grey_img.copy()
+
+    c1_img[grey_img != 0] = 255
+    c2_img[grey_img != 0] = 0
+    c3_img[grey_img != 0] = 0
+
+    c1_img, c2_img, c3_img = add_color(grey_img, c1_img, c2_img, c3_img, blue_domain[label])
+
+    rgb_img = np.append(c1_img, c2_img, axis = 2)
+    rgb_img = np.append(rgb_img, c3_img, axis = 2)
+
+    rgb_img = rgb_img.astype(np.uint8)
+
+    cv2.imwrite("/home/ubuntu/data/colored_MNIST/Raw images/" + path, rgb_img)
+
+tr_meta_files = pd.DataFrame({'path': train_paths, 'label': train_labels})
+tr_meta_files.to_csv("/home/ubuntu/data/colored_MNIST/Train val splits/blue_train_kfold.txt", header=None, sep=' ', encoding='utf-8', index = False)
+
+#Target
+test_paths = []
+test_labels = []
 for index, row in df_test_digits.iterrows():
     data = df_test_digits.iloc[index].to_numpy()
     label = labels_test[index]
@@ -135,9 +213,6 @@ for index, row in df_test_digits.iterrows():
     rgb_img = rgb_img.astype(np.uint8)
 
     cv2.imwrite("/home/ubuntu/data/colored_MNIST/Raw images/" + path, rgb_img)
-
-tr_meta_files = pd.DataFrame({'path': train_paths, 'label': train_labels})
-tr_meta_files.to_csv("/home/ubuntu/data/colored_MNIST/Train val splits/target_orange_train_kfold.txt", header=None, sep=' ', encoding='utf-8', index = False)
 
 test_meta_files = pd.DataFrame({'path': test_paths, 'label': test_labels})
 test_meta_files.to_csv("/home/ubuntu/data/colored_MNIST/Train val splits/target_orange_test_kfold.txt", header=None, sep=' ', encoding='utf-8', index = False)

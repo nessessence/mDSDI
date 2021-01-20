@@ -9,10 +9,10 @@ import pandas as pd
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from algorithms.DSDI.src.dataloaders import dataloader_factory
-from algorithms.DSDI.src.models import model_factory
+from algorithms.DSDI_debug.src.dataloaders import dataloader_factory
+from algorithms.DSDI_debug.src.models import model_factory
 from torch.optim import lr_scheduler
-from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import MultiStepLR
 import copy
 
 class GradReverse(torch.autograd.Function):
@@ -114,7 +114,7 @@ def set_test_samples_labels(meta_filenames):
             
     return sample_paths, class_labels
 
-class Trainer_DSDI:
+class Trainer_DSDI_debug:
     def __init__(self, args, device, exp_idx):
         self.args = args
         self.device = device
@@ -138,17 +138,18 @@ class Trainer_DSDI:
         self.domain_discriminator = Domain_Discriminator(feature_dim = self.args.feature_dim, domain_classes = self.args.n_domain_classes).to(self.device)
         
         optimizer = list(self.zi_model.parameters()) + list(self.zs_model.parameters()) + list(self.classifier.parameters()) + list(self.domain_discriminator.parameters()) + list(self.zs_domain_classifier.parameters())
-        self.optimizer = torch.optim.SGD(optimizer, lr = self.args.learning_rate, weight_decay = self.args.weight_decay, momentum = self.args.momentum, nesterov = False)
+        self.optimizer = torch.optim.Adam(optimizer, lr = self.args.learning_rate)
         
         meta_optimizer = list(self.zs_model.parameters()) + list(self.classifier.parameters())
-        self.meta_optimizer = torch.optim.SGD(meta_optimizer, lr = self.args.learning_rate, weight_decay = self.args.weight_decay, momentum = self.args.momentum, nesterov = False)
+        self.meta_optimizer = torch.optim.Adam(meta_optimizer, lr = self.args.learning_rate)
         
         self.criterion = nn.CrossEntropyLoss()
         self.reconstruction_criterion = nn.MSELoss()
-        self.scheduler = StepLR(self.optimizer, step_size=self.args.iterations * 0.8)
-        self.meta_scheduler = StepLR(self.meta_optimizer, step_size=self.args.iterations * 0.8)
+        self.scheduler = MultiStepLR(self.optimizer, milestones=[self.args.iterations * 0.5, self.args.iterations * 0.75])
+        self.meta_scheduler = MultiStepLR(self.meta_optimizer, milestones=[self.args.iterations * 0.5, self.args.iterations * 0.75])
 
         self.val_loss_min = np.Inf
+        self.val_acc_max = 0
 
     def set_writer(self, log_dir):
         if not os.path.exists(log_dir):
@@ -318,10 +319,13 @@ class Trainer_DSDI:
                 inner_classifier = copy.deepcopy(self.classifier)
                     
                 inner_param = list(inner_zs_model.parameters()) + list(inner_classifier.parameters())
-                lr_rate = self.args.learning_rate
-                if iteration > int(self.args.iterations * 0.8):
-                    lr_rate *= 0.1
-                inner_opt = torch.optim.SGD(inner_param, lr = lr_rate, weight_decay = self.args.weight_decay, momentum = self.args.momentum, nesterov = False)
+
+                if iteration > int(self.args.iterations * 0.75):
+                    inner_opt = torch.optim.Adam(inner_param, lr = self.args.learning_rate * 0.01)
+                elif iteration > int(self.args.iterations * 0.5):
+                    inner_opt = torch.optim.Adam(inner_param, lr = self.args.learning_rate * 0.1)
+                else:
+                    inner_opt = torch.optim.Adam(inner_param, lr = self.args.learning_rate)
 
                 di_z, ds_z = self.zi_model(mtr_samples), inner_zs_model(mtr_samples)
                 predicted_classes = inner_classifier(di_z, ds_z)
@@ -413,7 +417,8 @@ class Trainer_DSDI:
         logging.info('Val set: Accuracy: {}/{} ({:.2f}%)\tLoss: {:.6f}'.format(n_class_corrected, len(self.val_loader.dataset),
             100. * n_class_corrected / len(self.val_loader.dataset), total_classification_loss / len(self.val_loader.dataset)))
 
-        val_loss = total_classification_loss / len(self.val_loader.dataset)
+        # val_loss = total_classification_loss / len(self.val_loader.dataset)
+        val_acc = n_class_corrected / len(self.val_loader.dataset)
         
         self.zi_model.train()
         self.zs_model.train()
@@ -422,8 +427,8 @@ class Trainer_DSDI:
         self.zs_domain_classifier.train()
         self.domain_discriminator.train()
 
-        if self.val_loss_min > val_loss:
-            self.val_loss_min = val_loss
+        if self.val_acc_max < val_acc:
+            self.val_acc_max = val_acc
             torch.save({
                 'zi_model_state_dict': self.zi_model.state_dict(),
                 'zs_model_state_dict': self.zs_model.state_dict(),
@@ -431,6 +436,16 @@ class Trainer_DSDI:
                 'zs_domain_classifier_state_dict': self.zs_domain_classifier.state_dict(),
                 'domain_discriminator_state_dict': self.domain_discriminator.state_dict(),
             }, self.checkpoint_name + '.pt')
+
+        # if self.val_loss_min > val_loss:
+        #     self.val_loss_min = val_loss
+        #     torch.save({
+        #         'zi_model_state_dict': self.zi_model.state_dict(),
+        #         'zs_model_state_dict': self.zs_model.state_dict(),
+        #         'classifier_state_dict': self.classifier.state_dict(),
+        #         'zs_domain_classifier_state_dict': self.zs_domain_classifier.state_dict(),
+        #         'domain_discriminator_state_dict': self.domain_discriminator.state_dict(),
+        #     }, self.checkpoint_name + '.pt')
     
     def test(self):
         checkpoint = torch.load(self.checkpoint_name + '.pt')

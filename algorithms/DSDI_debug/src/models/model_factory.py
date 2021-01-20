@@ -1,5 +1,5 @@
-from algorithms.DSDI.src.models import resnet
-from algorithms.DSDI.src.models import mnistnet
+from algorithms.DSDI_debug.src.models import resnet
+from algorithms.DSDI_debug.src.models import mnistnet
 
 nets_map = {
     'mnistnet': mnistnet.mnistnet,
