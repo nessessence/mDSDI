@@ -1,15 +1,21 @@
 from algorithms.AGG.src.dataloaders.PACS_Dataloader import PACSDataloader, PACS_Test_Dataloader
+from algorithms.AGG.src.dataloaders.DomainNet_Dataloader import DomainNetDataloader, DomainNet_Test_Dataloader
+from algorithms.AGG.src.dataloaders.OfficeHome_Dataloader import OfficeHomeDataloader, OfficeHome_Test_Dataloader
 from algorithms.AGG.src.dataloaders.VLCS_Dataloader import VLCSDataloader, VLCS_Test_Dataloader
 from algorithms.AGG.src.dataloaders.MNIST_Dataloader import MNISTDataloader, MNIST_Test_Dataloader
 
 train_dataloaders_map = {
     'PACS': PACSDataloader,
+    'DomainNet': DomainNetDataloader,
+    'OfficeHome': OfficeHomeDataloader,
     'VLCS': VLCSDataloader,
     'MNIST': MNISTDataloader
 }
 
 test_dataloaders_map = {
     'PACS': PACS_Test_Dataloader,
+    'DomainNet': DomainNet_Test_Dataloader,
+    'OfficeHome': OfficeHome_Test_Dataloader,
     'VLCS': VLCS_Test_Dataloader,
     'MNIST': MNIST_Test_Dataloader
 }

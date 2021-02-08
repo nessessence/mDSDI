@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 from PIL import Image
 import torchvision.transforms as transforms
 
-class PACSDataloader(Dataset):
+class OfficeHomeDataloader(Dataset):
     def __init__(self, src_path, sample_paths, class_labels):
         self.image_transformer = transforms.Compose([
             transforms.Resize((224, 224)),
@@ -22,10 +22,10 @@ class PACSDataloader(Dataset):
 
     def __getitem__(self, index):
         sample = self.get_image(self.src_path + self.sample_paths[index])
-        class_label = self.class_labels[index] - 1
+        class_label = self.class_labels[index]
         
         return sample, class_label
 
-class PACS_Test_Dataloader(PACSDataloader):
+class OfficeHome_Test_Dataloader(OfficeHomeDataloader):
     def __init__(self, *args, **xargs):
         super().__init__(*args, **xargs)

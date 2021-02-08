@@ -5,19 +5,31 @@ from matplotlib import pyplot as plt
 from sklearn.manifold import TSNE
 import pickle
 
-def plot_TNSE(X_2d_tr, X_2d_test, tr_labels, test_labels, label_target_names, filename):
+def plot_TNSE(X_2d_tr, tr_labels, label_target_names, filename, title_name, legend = False):
     colors=['red','green','blue','black','brown','grey','orange','yellow','pink','cyan','magenta']
     plt.figure(figsize=(16, 16))
     for i, label in zip(range(len(label_target_names)), label_target_names):
-        plt.scatter(X_2d_tr[tr_labels == i, 0], X_2d_tr[tr_labels == i, 1], c=colors[i], marker='.', label=label)
+        if label == 0:
+            plt.scatter(X_2d_tr[tr_labels == i, 0], X_2d_tr[tr_labels == i, 1], c=colors[i], marker='.', label="dog")
+        if label == 1:
+            plt.scatter(X_2d_tr[tr_labels == i, 0], X_2d_tr[tr_labels == i, 1], c=colors[i], marker='.', label="elephant")
+        if label == 2:
+            plt.scatter(X_2d_tr[tr_labels == i, 0], X_2d_tr[tr_labels == i, 1], c=colors[i], marker='.', label="giraffe")
+        if label == 3:
+            plt.scatter(X_2d_tr[tr_labels == i, 0], X_2d_tr[tr_labels == i, 1], c=colors[i], marker='.', label="guitar")
+        if label == 4:
+            plt.scatter(X_2d_tr[tr_labels == i, 0], X_2d_tr[tr_labels == i, 1], c=colors[i], marker='.', label="horse")
+        if label == 5:
+            plt.scatter(X_2d_tr[tr_labels == i, 0], X_2d_tr[tr_labels == i, 1], c=colors[i], marker='.', label="house")
+        if label == 6:
+            plt.scatter(X_2d_tr[tr_labels == i, 0], X_2d_tr[tr_labels == i, 1], c=colors[i], marker='.', label="person")
 
-    for i, label in zip(range(len(label_target_names)), label_target_names):
-        plt.scatter(X_2d_test[test_labels == i, 0], X_2d_test[test_labels == i, 1], c=colors[i], marker='2', label=label)
-
-    plt.legend(loc=2, fontsize = 'x-small')
+    if legend:
+        plt.legend(loc=2, fontsize = 'x-small')
+    # plt.title(title_name)
     plt.savefig(filename)
 
-def tsne_plot(Zi_out, Zs_out, labels, domain_labels, idx_split):
+def tsne_plot(Zi_out, Zs_out, labels, domain_labels, dir_name):
     def unique(list1):
         unique_list = []
         for x in list1:
@@ -31,8 +43,6 @@ def tsne_plot(Zi_out, Zs_out, labels, domain_labels, idx_split):
 
     labels = np.asarray(labels)
     domain_labels = np.asarray(domain_labels)
-    tr_labels, test_labels = labels[:idx_split], labels[idx_split:]
-    tr_domain_labels, test_domain_labels = domain_labels[:idx_split], domain_labels[idx_split:]
     label_target_names = unique(labels)
     domain_label_target_names = unique(domain_labels)
 
@@ -40,52 +50,44 @@ def tsne_plot(Zi_out, Zs_out, labels, domain_labels, idx_split):
     Z_2d = tsne_model.fit_transform(Z_out)
     Zi_2d = tsne_model.fit_transform(Zi_out)
     Zs_2d = tsne_model.fit_transform(Zs_out)
-
-    Z_2d_tr, Z_2d_test = Z_2d[:idx_split], Z_2d[idx_split:]
-    Zi_2d_tr, Zi_2d_test = Zi_2d[:idx_split], Zi_2d[idx_split:]
-    Zs_2d_tr, Zs_2d_test = Zs_2d[:idx_split], Zs_2d[idx_split:]
-    tr_labels, test_labels = labels[:idx_split], labels[idx_split:]
-    tr_domain_labels, test_domain_labels = domain_labels[:idx_split], domain_labels[idx_split:]
     
-    plot_TNSE(Z_2d_tr, Z_2d_test, tr_labels, test_labels, label_target_names, 'Z_class_tSNE.png')
-    plot_TNSE(Z_2d_tr, Z_2d_test, tr_domain_labels, test_domain_labels, domain_label_target_names, 'Z_domain_tSNE.png')
+    plot_TNSE(Z_2d, labels, label_target_names, dir_name + 'Z_class_tSNE.png', title_name = "DSDI (Classes)", legend = True)
+    plot_TNSE(Z_2d, domain_labels, domain_label_target_names, dir_name + 'Z_domain_tSNE.png', title_name = "DSDI (Domains)")
 
-    plot_TNSE(Zi_2d_tr, Zi_2d_test, tr_labels, test_labels, label_target_names, 'Zi_class_tSNE.png')
-    plot_TNSE(Zi_2d_tr, Zi_2d_test, tr_domain_labels, test_domain_labels, domain_label_target_names, 'Zi_domain_tSNE.png')
+    plot_TNSE(Zi_2d, labels, label_target_names, dir_name + 'Zi_class_tSNE.png', title_name = "DI (Classes)", legend = True)
+    plot_TNSE(Zi_2d, domain_labels, domain_label_target_names, dir_name + 'Zi_domain_tSNE.png', title_name = "DI (Domains)")
 
-    plot_TNSE(Zs_2d_tr, Zs_2d_test, tr_labels, test_labels, label_target_names, 'Zs_class_tSNE.png')
-    plot_TNSE(Zs_2d_tr, Zs_2d_test, tr_domain_labels, test_domain_labels, domain_label_target_names, 'Zs_domain_tSNE.png')
+    plot_TNSE(Zs_2d, labels, label_target_names, dir_name + 'Zs_class_tSNE.png', title_name = "DS (Classes)", legend = True)
+    plot_TNSE(Zs_2d, domain_labels, domain_label_target_names, dir_name + 'Zs_domain_tSNE.png', title_name = "DS (Domains)")
 
 def main():
-    with open ('Zi_out', 'rb') as fp:
+    dir_name = "algorithms/DI_debug/results/plots/PACS_photo_1/"
+    with open (dir_name + 'Zi_out.pkl', 'rb') as fp:
         Zi_out = pickle.load(fp)
-    with open ('Zs_out', 'rb') as fp:
+    with open (dir_name + 'Zi_out.pkl', 'rb') as fp:
         Zs_out = pickle.load(fp)
-    with open ('Y_out', 'rb') as fp:
+    with open (dir_name + 'Y_out.pkl', 'rb') as fp:
         Y_out = pickle.load(fp)
-    with open ('Y_domain_out', 'rb') as fp:
+    with open (dir_name + 'Y_domain_out.pkl', 'rb') as fp:
         Y_domain_out = pickle.load(fp)
     
-    # with open ('Zi_test', 'rb') as fp:
-    #     Zi_test = pickle.load(fp)
-    # with open ('Zs_test', 'rb') as fp:
-    #     Zs_test = pickle.load(fp)
-    # with open ('Y_test', 'rb') as fp:
-    #     Y_test = pickle.load(fp)
-    # with open ('Y_domain_test', 'rb') as fp:
-    #     Y_domain_test = pickle.load(fp)
+    with open (dir_name + 'Zi_test.pkl', 'rb') as fp:
+        Zi_test = pickle.load(fp)
+    with open (dir_name + 'Zi_test.pkl', 'rb') as fp:
+        Zs_test = pickle.load(fp)
+    with open (dir_name + 'Y_test.pkl', 'rb') as fp:
+        Y_test = pickle.load(fp)
+    with open (dir_name + 'Y_domain_test.pkl', 'rb') as fp:
+        Y_domain_test = pickle.load(fp)
 
-    # for i in range(len(Y_domain_test)):
-    #     Y_domain_test[i] = 3
+    for i in range(len(Y_domain_test)):
+        Y_domain_test[i] = 3
 
-    # Zi_out += Zi_test
-    # Zs_out += Zs_test
-    # Y_out += Y_test
-    # Y_domain_out += Y_domain_test
-    print(len(Y_out))
-    exit()
+    Zi_out += Zi_test
+    Zs_out += Zs_test
+    Y_out += Y_test
+    Y_domain_out += Y_domain_test
 
-    idx_split = len(Zi_out)
-    tsne_plot(Zi_out, Zs_out, Y_out, Y_domain_out, idx_split)
+    tsne_plot(Zi_out, Zs_out, Y_out, Y_domain_out, dir_name)
 
 main()

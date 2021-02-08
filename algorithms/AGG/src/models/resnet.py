@@ -117,7 +117,7 @@ def resnet18(pretrained=True, **kwargs):
     """
     model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
     if pretrained:
-        model.load_state_dict(torch.load("pretrained_models/resnet18-5c106cde.pth"))
+        model.load_state_dict(torch.load("pretrained_models/resnet18-5c106cde.pth"), strict = False)
 
     return model
 
@@ -128,5 +128,5 @@ def resnet50(pretrained=True, **kwargs):
     """
     model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
     if pretrained:
-        model.load_state_dict(torch.load("pretrained_models/resnet50-19c8e357.pth"))
+        model.load_state_dict(torch.load("pretrained_models/resnet50-19c8e357.pth"), strict = False)
     return model

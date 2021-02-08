@@ -11,9 +11,10 @@
         "/home/ubuntu/data/PACS_DataSet/Train val splits/sketch_train_kfold.txt"],
     "target_test_meta_filenames": ["/home/ubuntu/data/PACS_DataSet/Train val splits/art_painting_test_kfold.txt"],
     "n_classes": 7,
+    "n_domain_classes": 3,
     "iterations": 3000,
     "learning_rate": 0.001,
-    "weight_decay": 1e-4,
+    "weight_decay": 0.0005,
     "momentum": 0.9,
     "batch_size": 32,
     "step_eval": 100
