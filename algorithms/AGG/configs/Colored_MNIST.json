@@ -5,6 +5,7 @@
     "feature_dim": 512,
     "dataset": "Colored_MNIST",
     "seed_value": 1,
+    "val_size": 0.1,
     "src_data_path": "/home/ubuntu/data/colored_MNIST/Raw images/",
     "src_train_meta_filenames":["/home/ubuntu/data/colored_MNIST/Train val splits/blue_train_kfold.txt",
         "/home/ubuntu/data/colored_MNIST/Train val splits/green_train_kfold.txt",

@@ -5,6 +5,7 @@
     "feature_dim": 512,
     "dataset": "PACS",
     "seed_value": 1,
+    "val_size": 0.1,
     "src_data_path": "/home/ubuntu/data/PACS_DataSet/Raw images/kfold/",
     "src_train_meta_filenames":["/home/ubuntu/data/PACS_DataSet/Train val splits/photo_train_kfold.txt",
         "/home/ubuntu/data/PACS_DataSet/Train val splits/cartoon_train_kfold.txt",

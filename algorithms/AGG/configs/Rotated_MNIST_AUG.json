@@ -5,6 +5,7 @@
     "feature_dim": 128,
     "dataset": "MNIST_AUG",
     "seed_value": 1,
+    "val_size": 0,
     "src_data_path": "/home/ubuntu/data/rotated_MNIST/MNIST/Raw images/",
     "src_train_meta_filenames":["/home/ubuntu/data/rotated_MNIST/MNIST/Train val splits/15_degree_train_kfold.txt",
         "/home/ubuntu/data/rotated_MNIST/MNIST/Train val splits/30_degree_train_kfold.txt",

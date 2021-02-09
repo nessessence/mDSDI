@@ -1,18 +1,17 @@
 import os
 import logging
 import shutil
-import torch
-import torch.nn as nn
 import numpy as np
 import pandas as pd
+import torch
+import torch.nn as nn
+from torch.optim import lr_scheduler
+from torch.optim.lr_scheduler import StepLR, MultiStepLR
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from algorithms.AGG.src.dataloaders import dataloader_factory
 from algorithms.AGG.src.models import model_factory
-from torch.optim import lr_scheduler
-from torch.optim.lr_scheduler import StepLR, MultiStepLR
-import torchvision.models as models
 
 class Classifier(nn.Module):
     def __init__(self, feature_dim, classes):
@@ -23,15 +22,15 @@ class Classifier(nn.Module):
         y = self.classifier(z)
         return y   
 
-def set_tr_val_samples_labels(meta_filenames):
+def set_tr_val_samples_labels(meta_filenames, val_size):
     sample_tr_paths, class_tr_labels, sample_val_paths, class_val_labels = [], [], [], []
 
     for idx_domain, meta_filename in enumerate(meta_filenames):
         column_names = ['filename', 'class_label']
         data_frame = pd.read_csv(meta_filename, header = None, names = column_names, sep='\s+')
-        data_frame = data_frame.sample(frac = 1).reset_index(drop=True)
+        data_frame = data_frame.sample(frac = 1).reset_index(drop = True)
 
-        split_idx = int(len(data_frame) * 0.9)
+        split_idx = int(len(data_frame) * (1 - val_size))
         sample_tr_paths.append(data_frame["filename"][:split_idx])
         class_tr_labels.append(data_frame["class_label"][:split_idx])
 
@@ -57,18 +56,20 @@ class Trainer_AGG:
         self.writer = self.set_writer(log_dir = "algorithms/" + self.args.algorithm + "/results/tensorboards/" + self.args.exp_name + "_" + exp_idx + "/")
         self.checkpoint_name = "algorithms/" + self.args.algorithm + "/results/checkpoints/" + self.args.exp_name + "_" + exp_idx 
                
-        src_tr_sample_paths, src_tr_class_labels, src_val_sample_paths, src_val_class_labels = set_tr_val_samples_labels(self.args.src_train_meta_filenames)
+        src_tr_sample_paths, src_tr_class_labels, src_val_sample_paths, src_val_class_labels = set_tr_val_samples_labels(self.args.src_train_meta_filenames, self.args.val_size)
         test_sample_paths, test_class_labels = set_test_samples_labels(self.args.target_test_meta_filenames)
-
         self.train_loaders = []
         for i in range(self.args.n_domain_classes):
             self.train_loaders.append(DataLoader(dataloader_factory.get_train_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = src_tr_sample_paths[i], class_labels = src_tr_class_labels[i]), batch_size = self.args.batch_size, shuffle = True))
 
-        self.val_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = src_val_sample_paths, class_labels = src_val_class_labels), batch_size = self.args.batch_size, shuffle = True)
+        if self.args.val_size != 0:
+            self.val_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = src_val_sample_paths, class_labels = src_val_class_labels), batch_size = self.args.batch_size, shuffle = True)
+        else:
+            self.val_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = test_sample_paths, class_labels = test_class_labels), batch_size = self.args.batch_size, shuffle = True)
+        
         self.test_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = test_sample_paths, class_labels = test_class_labels), batch_size = self.args.batch_size, shuffle = True)
-
         self.model = model_factory.get_model(self.args.model)().to(self.device)
-        self.classifier = Classifier(feature_dim = self.args.feature_dim, classes = self.args.n_classes).to(self.device)
+        self.classifier = Classifier(self.args.feature_dim, self.args.n_classes).to(self.device)
 
         optimizer_params = list(self.model.parameters()) + list(self.classifier.parameters())
         self.optimizer = self.set_optimizer(self.args.optimizer, optimizer_params, self.args.learning_rate, self.args.weight_decay, self.args.momentum)
@@ -76,6 +77,7 @@ class Trainer_AGG:
 
         self.criterion = nn.CrossEntropyLoss()
         self.val_loss_min = np.Inf
+        self.val_acc_max = 0
 
     def set_optimizer(self, optimizer_type, optimizer_params, learning_rate, weight_decay, momentum):
         if optimizer_type == "SGD":
@@ -166,14 +168,19 @@ class Trainer_AGG:
         logging.info('Val set: Accuracy: {}/{} ({:.2f}%)\tLoss: {:.6f}'.format(n_class_corrected, len(self.val_loader.dataset),
             100. * n_class_corrected / len(self.val_loader.dataset), total_classification_loss / len(self.val_loader.dataset)))
 
+        val_acc = n_class_corrected / len(self.val_loader.dataset)
         val_loss = total_classification_loss / len(self.val_loader.dataset)
 
         self.model.train()
         self.classifier.train()
-
-        if self.val_loss_min > val_loss:
-            self.val_loss_min = val_loss
-            torch.save({'model_state_dict': self.model.state_dict(), 'classifier_state_dict': self.classifier.state_dict()}, self.checkpoint_name + '.pt')
+        if self.args.val_size != 0:
+            if self.val_loss_min > val_loss:
+                self.val_loss_min = val_loss
+                torch.save({'model_state_dict': self.model.state_dict(), 'classifier_state_dict': self.classifier.state_dict()}, self.checkpoint_name + '.pt')
+        else:
+            if self.val_acc_max < val_acc:
+                self.val_acc_max = val_acc
+                torch.save({'model_state_dict': self.model.state_dict(), 'classifier_state_dict': self.classifier.state_dict()}, self.checkpoint_name + '.pt')
 
     def test(self):
         checkpoint = torch.load(self.checkpoint_name + '.pt')

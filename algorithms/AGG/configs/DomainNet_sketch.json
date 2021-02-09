@@ -5,6 +5,7 @@
     "feature_dim": 512,
     "dataset": "DomainNet",
     "seed_value": 1,
+    "val_size": 0.1,
     "src_data_path": "/home/ubuntu/data/DomainNet/Raw images/",
     "src_train_meta_filenames":["/home/ubuntu/data/DomainNet/Train val splits/clipart_train.txt",
         "/home/ubuntu/data/DomainNet/Train val splits/infograph_train.txt",
