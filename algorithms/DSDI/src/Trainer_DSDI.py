@@ -164,7 +164,7 @@ class Trainer_DSDI:
         shutil.rmtree(log_dir)
         return SummaryWriter(log_dir)
 
-def save_plot(self):
+    def save_plot(self):
         checkpoint = torch.load(self.checkpoint_name + '.pt')
         self.zi_model.load_state_dict(checkpoint['zi_model_state_dict'])
         self.zs_model.load_state_dict(checkpoint['zs_model_state_dict'])
@@ -486,5 +486,3 @@ def save_plot(self):
         
         logging.info('Test set: Accuracy: {}/{} ({:.2f}%)'.format(n_class_corrected, len(self.test_loader.dataset), 
             100. * n_class_corrected / len(self.test_loader.dataset)))
-        
-        # self.save_plot()

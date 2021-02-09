@@ -13,6 +13,8 @@
     "n_classes": 65,
     "n_domain_classes": 3,
     "iterations": 3000,
+    "optimizer": "SGD",
+    "scheduler_step_size": [0.8],
     "learning_rate": 0.001,
     "weight_decay": 0.0005,
     "momentum": 0.9,

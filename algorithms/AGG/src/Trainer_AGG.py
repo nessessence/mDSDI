@@ -11,7 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 from algorithms.AGG.src.dataloaders import dataloader_factory
 from algorithms.AGG.src.models import model_factory
 from torch.optim import lr_scheduler
-from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import StepLR, MultiStepLR
 import torchvision.models as models
 
 class Classifier(nn.Module):
@@ -29,7 +29,7 @@ def set_tr_val_samples_labels(meta_filenames):
     for idx_domain, meta_filename in enumerate(meta_filenames):
         column_names = ['filename', 'class_label']
         data_frame = pd.read_csv(meta_filename, header = None, names = column_names, sep='\s+')
-        data_frame = data_frame.sample(frac=1).reset_index(drop=True)
+        data_frame = data_frame.sample(frac = 1).reset_index(drop=True)
 
         split_idx = int(len(data_frame) * 0.9)
         sample_tr_paths.append(data_frame["filename"][:split_idx])
@@ -55,7 +55,8 @@ class Trainer_AGG:
         self.args = args
         self.device = device
         self.writer = self.set_writer(log_dir = "algorithms/" + self.args.algorithm + "/results/tensorboards/" + self.args.exp_name + "_" + exp_idx + "/")
-        self.checkpoint_name = "algorithms/" + self.args.algorithm + "/results/checkpoints/" + self.args.exp_name + "_" + exp_idx        
+        self.checkpoint_name = "algorithms/" + self.args.algorithm + "/results/checkpoints/" + self.args.exp_name + "_" + exp_idx 
+               
         src_tr_sample_paths, src_tr_class_labels, src_val_sample_paths, src_val_class_labels = set_tr_val_samples_labels(self.args.src_train_meta_filenames)
         test_sample_paths, test_class_labels = set_test_samples_labels(self.args.target_test_meta_filenames)
 
@@ -69,12 +70,24 @@ class Trainer_AGG:
         self.model = model_factory.get_model(self.args.model)().to(self.device)
         self.classifier = Classifier(feature_dim = self.args.feature_dim, classes = self.args.n_classes).to(self.device)
 
-        optimizer = list(self.model.parameters()) + list(self.classifier.parameters())
-        self.optimizer = torch.optim.SGD(optimizer, lr = self.args.learning_rate, weight_decay = self.args.weight_decay, momentum = self.args.momentum)
-        self.criterion = nn.CrossEntropyLoss()
-        self.scheduler = StepLR(self.optimizer, step_size=self.args.iterations)
+        optimizer_params = list(self.model.parameters()) + list(self.classifier.parameters())
+        self.optimizer = self.set_optimizer(self.args.optimizer, optimizer_params, self.args.learning_rate, self.args.weight_decay, self.args.momentum)
+        self.scheduler = self.set_scheduler(self.args.optimizer, self.optimizer, self.args.iterations, self.args.scheduler_step_size)
 
+        self.criterion = nn.CrossEntropyLoss()
         self.val_loss_min = np.Inf
+
+    def set_optimizer(self, optimizer_type, optimizer_params, learning_rate, weight_decay, momentum):
+        if optimizer_type == "SGD":
+            return torch.optim.SGD(optimizer_params, lr = learning_rate, weight_decay = weight_decay, momentum = momentum)
+        elif optimizer_type == "Adam":
+            return torch.optim.Adam(optimizer_params, lr = learning_rate)
+    
+    def set_scheduler(self, optimizer_type, optimizer, iterations, scheduler_step_size):
+        if optimizer_type == "SGD":
+            return StepLR(optimizer, step_size = iterations * scheduler_step_size[0])
+        elif optimizer_type == "Adam":
+            return MultiStepLR(optimizer, milestones = [x * iterations for x in scheduler_step_size])
 
     def set_writer(self, log_dir):
         if not os.path.exists(log_dir):
@@ -84,7 +97,6 @@ class Trainer_AGG:
 
     def train(self):
         self.model.train()
-        # self.model.bn_eval()
         self.classifier.train()
 
         n_class_corrected = 0
@@ -157,7 +169,6 @@ class Trainer_AGG:
         val_loss = total_classification_loss / len(self.val_loader.dataset)
 
         self.model.train()
-        # self.model.bn_eval()
         self.classifier.train()
 
         if self.val_loss_min > val_loss:

@@ -3,10 +3,11 @@ from torch.utils.data import Dataset
 from PIL import Image
 import torchvision.transforms as transforms
 
-class MNISTDataloader(Dataset):
+class MNISTAUGDataloader(Dataset):
     def __init__(self, src_path, sample_paths, class_labels):
         self.image_transformer = transforms.Compose([
             transforms.Resize((28, 28)),
+            transforms.RandomCrop(28, padding = 4),
             transforms.ToTensor(),
             transforms.Normalize([0.1307], [0.3081]),
         ])
@@ -26,7 +27,7 @@ class MNISTDataloader(Dataset):
         
         return sample, class_label
 
-class MNIST_Test_Dataloader(MNISTDataloader):
+class MNIST_AUG_Test_Dataloader(MNISTAUGDataloader):
     def __init__(self, *args, **xargs):
         super().__init__(*args, **xargs)
         self.image_transformer = transforms.Compose([

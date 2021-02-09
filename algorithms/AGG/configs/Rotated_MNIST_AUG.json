@@ -1,9 +1,9 @@
 {
-    "exp_name": "Rotated_MNIST",
+    "exp_name": "Rotated_MNIST_AUG",
     "algorithm": "AGG",
     "model": "mnistnet",
     "feature_dim": 128,
-    "dataset": "MNIST",
+    "dataset": "MNIST_AUG",
     "seed_value": 1,
     "src_data_path": "/home/ubuntu/data/rotated_MNIST/MNIST/Raw images/",
     "src_train_meta_filenames":["/home/ubuntu/data/rotated_MNIST/MNIST/Train val splits/15_degree_train_kfold.txt",

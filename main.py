@@ -44,5 +44,5 @@ if __name__ == "__main__":
     trainer = algorithms_map[args.algorithm](args, device, bash_args.exp_idx)
     trainer.train()
     trainer.test()
-    # trainer.save_plot()
+    trainer.save_plot()
     print("Finished!")

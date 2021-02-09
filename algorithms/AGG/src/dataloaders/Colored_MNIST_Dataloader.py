@@ -4,14 +4,13 @@ from PIL import Image
 import torchvision.transforms as transforms
 
 class ColoredMNISTDataloader(Dataset):
-    def __init__(self, src_path, sample_paths, class_labels, domain_label = -1):
+    def __init__(self, src_path, sample_paths, class_labels):
         self.image_transformer = transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
         self.src_path = src_path
-        self.domain_label = domain_label
         self.sample_paths, self.class_labels = sample_paths, class_labels
         
     def get_image(self, sample_path):
@@ -25,7 +24,7 @@ class ColoredMNISTDataloader(Dataset):
         sample = self.get_image(self.src_path + self.sample_paths[index])
         class_label = self.class_labels[index]
         
-        return sample, class_label, self.domain_label
+        return sample, class_label
 
 class Colored_MNIST_Test_Dataloader(ColoredMNISTDataloader):
     def __init__(self, *args, **xargs):
