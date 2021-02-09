@@ -1,10 +1,8 @@
-from algorithms.AGG.src.models import caffenet
 from algorithms.AGG.src.models import resnet
 from algorithms.AGG.src.models import mnistnet
 
 nets_map = {
     'mnistnet': mnistnet.mnistnet,
-    'caffenet': caffenet.caffenet,
     'resnet18': resnet.resnet18,
     'resnet50': resnet.resnet50
 }

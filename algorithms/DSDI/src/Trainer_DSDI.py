@@ -419,7 +419,6 @@ def save_plot(self):
                 di_z, ds_z = self.zi_model(samples), self.zs_model(samples)
                 
                 predicted_classes = self.classifier(di_z, ds_z)
-
                 classification_loss = self.criterion(predicted_classes, labels)
                 total_classification_loss += classification_loss.item()
 
@@ -480,7 +479,6 @@ def save_plot(self):
             for iteration, (samples, labels, domain_labels) in enumerate(self.test_loader):
                 samples, labels = samples.to(self.device), labels.to(self.device)
                 di_z, ds_z = self.zi_model(samples), self.zs_model(samples)
-                
                 predicted_classes = self.classifier(di_z, ds_z)
 
                 _, predicted_classes = torch.max(predicted_classes, 1)
