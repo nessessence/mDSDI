@@ -39,7 +39,7 @@ To train model: (select different settings by editing in /configs/..json and tra
 
 ```sh
 for i in {1..5}; do
-     taskset -c "51" python main.py --config "algorithms/ERM/configs/DomainNet_clipart.json" --exp_idx $i --gpu_idx "1"
+     taskset -c "0" python main.py --config "algorithms/mDSDI/configs/PACS_art.json" --exp_idx $i --gpu_idx "0"
 done
 ```
 
@@ -54,3 +54,4 @@ To plot t-SNE: ()
 ```sh
 python utils/tSNE_plot.py
 ```
+![t-SNE visualization](Loss.pdf)
