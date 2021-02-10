@@ -6,8 +6,8 @@ import torch
 import numpy as np
 import random
 
-from algorithms.AGG.src.Trainer_AGG import Trainer_AGG
-from algorithms.DSDI.src.Trainer_DSDI import Trainer_DSDI
+from algorithms.ERM.src.Trainer_ERM import Trainer_ERM
+from algorithms.mDSDI.src.Trainer_mDSDI import Trainer_mDSDI
 
 def set_random_seed(seed_value):
     random.seed(seed_value)
@@ -22,8 +22,8 @@ def set_random_seed(seed_value):
         torch.backends.cudnn.deterministic = True
 
 algorithms_map = {
-    'AGG': Trainer_AGG,
-    'DSDI': Trainer_DSDI
+    'ERM': Trainer_ERM,
+    'mDSDI': Trainer_mDSDI
 }
 
 if __name__ == "__main__":
