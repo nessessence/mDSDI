@@ -279,14 +279,13 @@ class Trainer_mDSDI:
             
             di_z, ds_z = self.zi_model(tr_samples), self.zs_model(tr_samples)
 
-            # Correlation Matrix
-            mdi_z = torch.mean(di_z, 0)         # Size M
-            mds_z = torch.mean(ds_z, 0)           # Size N
+            # Distangle by Covariance Matrix
+            mdi_z = torch.mean(di_z, 0)
+            mds_z = torch.mean(ds_z, 0)
 
-            di_z_n = (di_z - mdi_z[None, :])           # BxM
-            ds_z_n = (ds_z - mds_z[None, :])           # BxN
-            C = di_z_n[:, :, None] * ds_z_n[:,None,:]              # BxMxN
-            # C = torch.mean(C, 0)                               # MxN
+            di_z_n = (di_z - mdi_z[None, :])
+            ds_z_n = (ds_z - mds_z[None, :])
+            C = di_z_n[:, :, None] * ds_z_n[:,None,:]
             
             target_cr = torch.zeros(C.shape[0], C.shape[1], C.shape[2]).to(self.device)
             disentangle_loss = nn.MSELoss()(C, target_cr)
@@ -368,7 +367,6 @@ class Trainer_mDSDI:
                         
                 total_classification_loss += inner_obj.item()
 
-                # this computes Gj on the clone-network
                 di_z, ds_z = self.zi_model(mte_samples), inner_zs_model(mte_samples)
                 predicted_classes = inner_classifier(di_z, ds_z)
                 loss_inner_j = self.criterion(predicted_classes, mte_labels)
@@ -378,7 +376,6 @@ class Trainer_mDSDI:
                 grad_inner_j = torch.autograd.grad(loss_inner_j, inner_param,
                     allow_unused=True)
 
-                # `objective` is populated for reporting purposes
                 total_classification_loss += (1.0 * loss_inner_j).item()
 
                 for p, g_j in zip(self_param, grad_inner_j):
