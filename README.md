@@ -2,7 +2,8 @@
 ![framework](gallery/framework.png)
 
 ## Guideline
-### To prepare: (download, unzip the datasets and pretrained models)
+### To prepare:
+Download, unzip the datasets and pretrained models
 
 ```sh
 #Download pretrained models
@@ -37,7 +38,8 @@ rm -rf painting.zip
 ```
 <img src="gallery/dataset.png" width="50%" height="50%">
 
-### To train model: (select different settings by editing in /configs/..json, results are stored in /results/logs/)
+### To train model:
+Select different settings by editing in /configs/..json, logging results are stored in /results/logs/
 
 ```sh
 for i in {1..5}; do
@@ -45,7 +47,7 @@ for i in {1..5}; do
 done
 ```
 
-### To visualize objective functions: ()
+### To visualize objective functions:
 
 ```sh
 tensorboard --logdir=/mnt/vinai/mDSDI/algorithms/DSDI/results/tensorboards/PACS_photo_1
