@@ -35,7 +35,7 @@ wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download
 unzip painting.zip
 rm -rf painting.zip
 ```
-![Datasets](gallery/dataset.png =250x250)
+![Datasets](gallery/dataset.png){:height="50%" width="50%"}
 
 ### To train model: (select different settings by editing in /configs/..json, results are stored in /results/logs/)
 
@@ -50,11 +50,11 @@ done
 ```sh
 tensorboard --logdir=/mnt/vinai/mDSDI/algorithms/DSDI/results/tensorboards/PACS_photo_1
 ```
-![tensorboard](gallery/Loss.png =250x250)
+![tensorboard](gallery/Loss.png){:height="50%" width="50%"}
 
 ### To plot t-SNE: ()
 
 ```sh
 python utils/tSNE_plot.py
 ```
-![t-SNE visualization](gallery/tSNE.png =250x250)
+![t-SNE visualization](gallery/tSNE.png){:height="50%" width="50%"}
