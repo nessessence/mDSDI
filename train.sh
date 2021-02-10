@@ -1,4 +1,4 @@
-for i in {1..1}; do
+for i in {1..5}; do
      taskset -c "51" python main.py --config "algorithms/ERM/configs/DomainNet_clipart.json" --exp_idx $i --gpu_idx "0"
 done
 
