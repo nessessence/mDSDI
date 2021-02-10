@@ -4,5 +4,5 @@ data/
 *.log
 *.pt
 *.0
-# *.png
+*.png
 *.pkl

@@ -47,3 +47,5 @@ python utils/tSNE_plot.py --plotdir <plotdir>
 where `<plotdir>`: path stored results to plot. E.g., `<plotdir> = "algorithms/mDSDI/results/plots/PACS_photo_1/"`
 
 <img src="gallery/tSNE.png" width="50%" height="50%">
+
+**Note:** Results are stored in `/results/plots/`
