@@ -1,7 +1,8 @@
 # meta-Domain Specific-Domain Invariant (mDSDI)
+![framework](framework.png)
 
-### Guideline
-To prepare: (download, unzip the datasets and pretrained models)
+## Guideline
+### To prepare: (download, unzip the datasets and pretrained models)
 
 ```sh
 #Download pretrained models
@@ -34,8 +35,9 @@ wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download
 unzip painting.zip
 rm -rf painting.zip
 ```
+![Datasets](dataset.png)
 
-To train model: (select different settings by editing in /configs/..json and train.sh, results are stored in /results/logs/)
+### To train model: (select different settings by editing in /configs/..json, results are stored in /results/logs/)
 
 ```sh
 for i in {1..5}; do
@@ -43,14 +45,14 @@ for i in {1..5}; do
 done
 ```
 
-To visualize objective functions: ()
+### To visualize objective functions: ()
 
 ```sh
 tensorboard --logdir=/mnt/vinai/mDSDI/algorithms/DSDI/results/tensorboards/PACS_photo_1
 ```
 ![tensorboard](Loss.png)
 
-To plot t-SNE: ()
+### To plot t-SNE: ()
 
 ```sh
 python utils/tSNE_plot.py
