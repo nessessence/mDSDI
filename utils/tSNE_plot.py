@@ -45,10 +45,10 @@ def tsne_plot(Zi_out, Zs_out, labels, domain_labels, dir_name):
     plot_TNSE(Zs_2d, domain_labels, domain_label_target_names, dir_name + 'Zs_domain_tSNE.png')
 
 def main():
-    dir_name = "algorithms/mDSDI/results/plots/PACS_art_1/"
+    dir_name = "algorithms/mDSDI/results/plots/Colored_MNIST_1/"
     with open (dir_name + 'Zi_out.pkl', 'rb') as fp:
         Zi_out = pickle.load(fp)
-    with open (dir_name + 'Zi_out.pkl', 'rb') as fp:
+    with open (dir_name + 'Zs_out.pkl', 'rb') as fp:
         Zs_out = pickle.load(fp)
     with open (dir_name + 'Y_out.pkl', 'rb') as fp:
         Y_out = pickle.load(fp)
@@ -57,13 +57,14 @@ def main():
     
     with open (dir_name + 'Zi_test.pkl', 'rb') as fp:
         Zi_test = pickle.load(fp)
-    with open (dir_name + 'Zi_test.pkl', 'rb') as fp:
+    with open (dir_name + 'Zs_test.pkl', 'rb') as fp:
         Zs_test = pickle.load(fp)
     with open (dir_name + 'Y_test.pkl', 'rb') as fp:
         Y_test = pickle.load(fp)
     with open (dir_name + 'Y_domain_test.pkl', 'rb') as fp:
         Y_domain_test = pickle.load(fp)
 
+    #Change label of target domain from -1 to #source_domains + 1
     for i in range(len(Y_domain_test)):
         Y_domain_test[i] = 3
 
