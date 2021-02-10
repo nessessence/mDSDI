@@ -1,5 +1,6 @@
 __pycache__/
 pretrained_models/
+data/
 *.log
 *.pt
 *.0
