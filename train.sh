@@ -1,8 +1,9 @@
-for i in {1..5}; do
-     taskset -c "51" python main.py --config "algorithms/ERM/configs/DomainNet_clipart.json" --exp_idx $i --gpu_idx "1"
-done
+# for i in {1..1}; do
+#      taskset -c "51" python main.py --config "algorithms/mDSDI/configs/PACS_photo.json" --exp_idx $i --gpu_idx "1"
+# done
 
-# tensorboard --logdir=/mnt/vinai/mDSDI/algorithms/DSDI/results/tensorboards/PACS_photo_1
+# tensorboard --logdir "/home/ubuntu/DSDI/algorithms/mDSDI/results/tensorboards/PACS_photo_1"
+# python utils/tSNE_plot.py --plotdir "algorithms/mDSDI/results/plots/PACS_photo_1/"
 
 # rm -r algorithms/mDSDI/results/checkpoints/*
 # rm -r algorithms/mDSDI/results/logs/*

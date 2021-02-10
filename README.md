@@ -13,6 +13,7 @@ Download, unzip the datasets and pretrained models:
 ```sh
 bash setup.sh
 ```
+
 <img src="gallery/dataset.png" width="50%" height="50%">
 
 ### To train model:
@@ -34,13 +35,15 @@ where the parameters are the following:
 ```sh
 tensorboard --logdir `<logdir>`
 ```
-where `<logdir>`: absolute path stored tensorboards. E.g., `<logdir> = "/home/ubuntu/mDSDI/algorithms/DSDI/results/tensorboards/PACS_photo_1"`
+where `<logdir>`: absolute path stored TensorBoard results. E.g., `<logdir> = "/home/ubuntu/mDSDI/algorithms/mDSDI/results/tensorboards/PACS_photo_1"`
 
 <img src="gallery/Loss.png" width="50%" height="50%">
 
-### To plot t-SNE:
+### To plot feature representations:
 
 ```sh
-python utils/tSNE_plot.py
+python utils/tSNE_plot.py --plotdir `<plotdir>`
 ```
+where `<plotdir>`: path stored results to plot. E.g., `<plotdir> = "algorithms/mDSDI/results/plots/PACS_photo_1/"`
+
 <img src="gallery/tSNE.png" width="50%" height="50%">

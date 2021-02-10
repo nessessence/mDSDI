@@ -1,4 +1,5 @@
 import os
+import argparse
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
@@ -13,14 +14,14 @@ def plot_TNSE(X_2d_tr, tr_labels, label_target_names, filename):
 
     plt.savefig(filename)
 
-def tsne_plot(Zi_out, Zs_out, labels, domain_labels, dir_name):
-    def unique(list1):
-        unique_list = []
-        for x in list1:
-            if x not in unique_list:
-                unique_list.append(x)
-        return unique_list
+def unique(list1):
+    unique_list = []
+    for x in list1:
+        if x not in unique_list:
+            unique_list.append(x)
+    return unique_list
 
+def tsne_plot(Zi_out, Zs_out, labels, domain_labels, dir_name):
     Z_out = []
     for idx in range(len(Zi_out)):
         Z_out.append(Zi_out[idx] + Zs_out[idx])
@@ -44,8 +45,12 @@ def tsne_plot(Zi_out, Zs_out, labels, domain_labels, dir_name):
     plot_TNSE(Zs_2d, labels, label_target_names, dir_name + 'Zs_class_tSNE.png')
     plot_TNSE(Zs_2d, domain_labels, domain_label_target_names, dir_name + 'Zs_domain_tSNE.png')
 
-def main():
-    dir_name = "algorithms/mDSDI/results/plots/Colored_MNIST_1/"
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(formatter_class = argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--plotdir", help = "Path to configuration file")
+    bash_args = parser.parse_args()
+    dir_name = bash_args.plotdir
+
     with open (dir_name + 'Zi_out.pkl', 'rb') as fp:
         Zi_out = pickle.load(fp)
     with open (dir_name + 'Zs_out.pkl', 'rb') as fp:
@@ -65,8 +70,9 @@ def main():
         Y_domain_test = pickle.load(fp)
 
     #Change label of target domain from -1 to #source_domains + 1
+    Y_domain_label = len(unique(Y_domain_out))
     for i in range(len(Y_domain_test)):
-        Y_domain_test[i] = 3
+        Y_domain_test[i] = Y_domain_label
 
     Zi_out += Zi_test
     Zs_out += Zs_test
@@ -74,5 +80,3 @@ def main():
     Y_domain_out += Y_domain_test
 
     tsne_plot(Zi_out, Zs_out, Y_out, Y_domain_out, dir_name)
-
-main()
