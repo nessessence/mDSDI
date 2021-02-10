@@ -48,10 +48,11 @@ To visualize objective functions: ()
 ```sh
 tensorboard --logdir=/mnt/vinai/mDSDI/algorithms/DSDI/results/tensorboards/PACS_photo_1
 ```
+![tensorboard](Loss.png)
 
 To plot t-SNE: ()
 
 ```sh
 python utils/tSNE_plot.py
 ```
-![t-SNE visualization](Loss.pdf)
+![t-SNE visualization](tSNE.png)
