@@ -57,4 +57,4 @@ tensorboard --logdir=/mnt/vinai/mDSDI/algorithms/DSDI/results/tensorboards/PACS_
 ```sh
 python utils/tSNE_plot.py
 ```
-![t-SNE visualization](gallery/tSNE.png){:height="50%" width="50%"}
+<img src="gallery/tSNE.png" width="50%" height="50%">
