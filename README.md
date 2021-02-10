@@ -20,7 +20,7 @@ bash setup.sh
 Train with five different seeds:
 ```sh
 for i in {1..5}; do
-     taskset -c `<cpu_index>` python main.py --config `<config_path>` --exp_idx $i --gpu_idx `<gpu_index>`
+     taskset -c <cpu_index> python main.py --config <config_path> --exp_idx $i --gpu_idx <gpu_index>
 done
 ```
 where the parameters are the following:
@@ -28,12 +28,12 @@ where the parameters are the following:
 - `<config_path>`: path stored configuration hyper-parameters. E.g., `<config_path> = "algorithms/mDSDI/configs/PACS_photo.json"`
 - `<gpu_index>`: GPU index.E.g., `<gpu_index> = "0"`
 
-**Note:** Select different settings by editing in `/configs/..json`, logging results are stored in `/results/logs/`.
+**Note:** Select different settings by editing in `/configs/..json`, logging results are stored in `/results/logs/`
 
 ### To visualize objective functions:
 
 ```sh
-tensorboard --logdir `<logdir>`
+tensorboard --logdir <logdir>
 ```
 where `<logdir>`: absolute path stored TensorBoard results. E.g., `<logdir> = "/home/ubuntu/mDSDI/algorithms/mDSDI/results/tensorboards/PACS_photo_1"`
 
@@ -42,7 +42,7 @@ where `<logdir>`: absolute path stored TensorBoard results. E.g., `<logdir> = "/
 ### To plot feature representations:
 
 ```sh
-python utils/tSNE_plot.py --plotdir `<plotdir>`
+python utils/tSNE_plot.py --plotdir <plotdir>
 ```
 where `<plotdir>`: path stored results to plot. E.g., `<plotdir> = "algorithms/mDSDI/results/plots/PACS_photo_1/"`
 
