@@ -20,7 +20,7 @@ class Classifier(nn.Module):
 
     def forward(self, z):
         y = self.classifier(z)
-        return y   
+        return y 
 
 def set_tr_val_samples_labels(meta_filenames, val_size):
     sample_tr_paths, class_tr_labels, sample_val_paths, class_val_labels = [], [], [], []
@@ -54,8 +54,8 @@ class Trainer_AGG:
         self.args = args
         self.device = device
         self.writer = self.set_writer(log_dir = "algorithms/" + self.args.algorithm + "/results/tensorboards/" + self.args.exp_name + "_" + exp_idx + "/")
-        self.checkpoint_name = "algorithms/" + self.args.algorithm + "/results/checkpoints/" + self.args.exp_name + "_" + exp_idx 
-               
+        self.checkpoint_name = "algorithms/" + self.args.algorithm + "/results/checkpoints/" + self.args.exp_name + "_" + exp_idx
+
         src_tr_sample_paths, src_tr_class_labels, src_val_sample_paths, src_val_class_labels = set_tr_val_samples_labels(self.args.src_train_meta_filenames, self.args.val_size)
         test_sample_paths, test_class_labels = set_test_samples_labels(self.args.target_test_meta_filenames)
         self.train_loaders = []

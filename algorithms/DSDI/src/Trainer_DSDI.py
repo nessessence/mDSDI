@@ -1,17 +1,17 @@
 import os
 import logging
 import shutil
-import torch
-import torch.nn as nn
 import numpy as np
 import pandas as pd
+import torch
+import torch.nn as nn
+from torch.optim import lr_scheduler
+from torch.optim.lr_scheduler import StepLR, MultiStepLR
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from algorithms.DSDI.src.dataloaders import dataloader_factory
 from algorithms.DSDI.src.models import model_factory
-from torch.optim import lr_scheduler
-from torch.optim.lr_scheduler import StepLR
 import copy
 
 class GradReverse(torch.autograd.Function):
@@ -50,7 +50,7 @@ class Classifier(nn.Module):
     def __init__(self, feature_dim, classes):
         super(Classifier, self).__init__()
         self.classifier = nn.Linear(int(feature_dim * 2), classes)
-    
+
     def forward(self, di_z, ds_z):
         z = torch.cat((di_z, ds_z), dim = 1)
         y = self.classifier(z)
@@ -86,16 +86,15 @@ def random_pairs_of_minibatches(samples, labels):
 
     return pairs
 
-def set_tr_val_samples_labels(meta_filenames):
+def set_tr_val_samples_labels(meta_filenames, val_size):
     sample_tr_paths, class_tr_labels, sample_val_paths, class_val_labels = [], [], [], []
 
     for idx_domain, meta_filename in enumerate(meta_filenames):
         column_names = ['filename', 'class_label']
         data_frame = pd.read_csv(meta_filename, header = None, names = column_names, sep='\s+')
-        data_frame = data_frame.sample(frac=1).reset_index(drop=True)
-        
-        # split_idx = int(len(data_frame) * 1.0)
-        split_idx = int(len(data_frame) * 0.9)
+        data_frame = data_frame.sample(frac = 1).reset_index(drop = True)
+
+        split_idx = int(len(data_frame) * (1 - val_size))
         sample_tr_paths.append(data_frame["filename"][:split_idx])
         class_tr_labels.append(data_frame["class_label"][:split_idx])
 
@@ -121,16 +120,19 @@ class Trainer_DSDI:
         self.writer = self.set_writer(log_dir = "algorithms/" + self.args.algorithm + "/results/tensorboards/" + self.args.exp_name + "_" + exp_idx + "/")
         self.checkpoint_name = "algorithms/" + self.args.algorithm + "/results/checkpoints/" + self.args.exp_name + "_" + exp_idx
         self.plot_dir = "algorithms/" + self.args.algorithm + "/results/plots/" + self.args.exp_name + "_" + exp_idx + "/"
-        src_tr_sample_paths, src_tr_class_labels, src_val_sample_paths, src_val_class_labels = set_tr_val_samples_labels(self.args.src_train_meta_filenames)
-        test_sample_paths, test_class_labels = set_test_samples_labels(self.args.target_test_meta_filenames)
 
+        src_tr_sample_paths, src_tr_class_labels, src_val_sample_paths, src_val_class_labels = set_tr_val_samples_labels(self.args.src_train_meta_filenames, self.args.val_size)
+        test_sample_paths, test_class_labels = set_test_samples_labels(self.args.target_test_meta_filenames)
         GradReverse.max_iter = self.args.iterations
         self.train_loaders = []
         for i in range(self.args.n_domain_classes):
             self.train_loaders.append(DataLoader(dataloader_factory.get_train_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = src_tr_sample_paths[i], class_labels = src_tr_class_labels[i], domain_label = i), batch_size = self.args.batch_size, shuffle = True))
 
-        # self.val_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = test_sample_paths, class_labels = test_class_labels), batch_size = self.args.batch_size, shuffle = True)
-        self.val_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = src_val_sample_paths, class_labels = src_val_class_labels), batch_size = self.args.batch_size, shuffle = True)
+        if self.args.val_size != 0:
+            self.val_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = src_val_sample_paths, class_labels = src_val_class_labels), batch_size = self.args.batch_size, shuffle = True)
+        else:
+            self.val_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = test_sample_paths, class_labels = test_class_labels), batch_size = self.args.batch_size, shuffle = True)
+
         self.test_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = test_sample_paths, class_labels = test_class_labels), batch_size = self.args.batch_size, shuffle = True)
         self.zi_model = model_factory.get_model(self.args.model)().to(self.device)
         self.zs_model = model_factory.get_model(self.args.model)().to(self.device)
@@ -139,24 +141,30 @@ class Trainer_DSDI:
         self.zs_domain_classifier = ZS_Domain_Classifier(feature_dim = self.args.feature_dim, domain_classes = self.args.n_domain_classes).to(self.device)
         self.domain_discriminator = Domain_Discriminator(feature_dim = self.args.feature_dim, domain_classes = self.args.n_domain_classes).to(self.device)
         
-        optimizer = list(self.zi_model.parameters()) + list(self.zs_model.parameters()) + list(self.classifier.parameters()) + list(self.domain_discriminator.parameters()) + list(self.zs_domain_classifier.parameters())
-        # self.optimizer = torch.optim.Adam(optimizer, lr = self.args.learning_rate)
-        self.optimizer = torch.optim.SGD(optimizer, lr = self.args.learning_rate, weight_decay = self.args.weight_decay, momentum = self.args.momentum, nesterov = False)
-        
-        meta_optimizer = list(self.zs_model.parameters()) + list(self.classifier.parameters())
-        # self.meta_optimizer = torch.optim.Adam(meta_optimizer, lr = self.args.learning_rate)
-        self.meta_optimizer = torch.optim.SGD(meta_optimizer, lr = self.args.learning_rate, weight_decay = self.args.weight_decay, momentum = self.args.momentum, nesterov = False)
-        
+        optimizer_params = list(self.zi_model.parameters()) + list(self.zs_model.parameters()) + list(self.classifier.parameters()) + list(self.domain_discriminator.parameters()) + list(self.zs_domain_classifier.parameters())
+        self.optimizer = self.set_optimizer(self.args.optimizer, optimizer_params, self.args.learning_rate, self.args.weight_decay, self.args.momentum)
+        self.scheduler = self.set_scheduler(self.args.optimizer, self.optimizer, self.args.iterations, self.args.scheduler_step_size)
+
+        meta_optimizer_params = list(self.zs_model.parameters()) + list(self.classifier.parameters())
+        self.meta_optimizer = self.set_optimizer(self.args.optimizer, meta_optimizer_params, self.args.learning_rate, self.args.weight_decay, self.args.momentum)
+        self.meta_scheduler = self.set_scheduler(self.args.optimizer, self.meta_optimizer, self.args.iterations, self.args.scheduler_step_size)
+
         self.criterion = nn.CrossEntropyLoss()
         self.reconstruction_criterion = nn.MSELoss()
-        # self.scheduler = MultiStepLR(self.optimizer, milestones=[self.args.iterations * 0.5, self.args.iterations * 0.75])
-        # self.meta_scheduler = MultiStepLR(self.meta_optimizer, milestones=[self.args.iterations * 0.5, self.args.iterations * 0.75])
-        
-        self.scheduler = StepLR(self.optimizer, step_size=self.args.iterations * 0.8)
-        self.meta_scheduler = StepLR(self.meta_optimizer, step_size=self.args.iterations * 0.8)
-
         self.val_loss_min = np.Inf
-        # self.val_acc_max = 0
+        self.val_acc_max = 0
+
+    def set_optimizer(self, optimizer_type, optimizer_params, learning_rate, weight_decay, momentum):
+        if optimizer_type == "SGD":
+            return torch.optim.SGD(optimizer_params, lr = learning_rate, weight_decay = weight_decay, momentum = momentum)
+        elif optimizer_type == "Adam":
+            return torch.optim.Adam(optimizer_params, lr = learning_rate)
+    
+    def set_scheduler(self, optimizer_type, optimizer, iterations, scheduler_step_size):
+        if optimizer_type == "SGD":
+            return StepLR(optimizer, step_size = iterations * scheduler_step_size[0])
+        elif optimizer_type == "Adam":
+            return MultiStepLR(optimizer, milestones = [x * iterations for x in scheduler_step_size])
 
     def set_writer(self, log_dir):
         if not os.path.exists(log_dir):
@@ -229,10 +237,9 @@ class Trainer_DSDI:
         with open(self.plot_dir + 'Y_domain_test.pkl', 'wb') as fp:
             pickle.dump(Y_domain_test, fp)
 
-    def train(self):        
+    def train(self):
         self.zi_model.train()
         self.zs_model.train()
-        # self.model.bn_eval()
         self.classifier.train()
         self.zs_domain_classifier.train()
         self.domain_discriminator.train()
@@ -330,16 +337,19 @@ class Trainer_DSDI:
                     
                 inner_param = list(inner_zs_model.parameters()) + list(inner_classifier.parameters())
                 lr_rate = self.args.learning_rate
-                if iteration > int(self.args.iterations * 0.8):
-                    lr_rate *= 0.1
-                inner_opt = torch.optim.SGD(inner_param, lr = lr_rate, weight_decay = self.args.weight_decay, momentum = self.args.momentum, nesterov = False)
 
-                # if iteration > int(self.args.iterations * 0.75):
-                #     inner_opt = torch.optim.Adam(inner_param, lr = self.args.learning_rate * 0.01)
-                # elif iteration > int(self.args.iterations * 0.5):
-                #     inner_opt = torch.optim.Adam(inner_param, lr = self.args.learning_rate * 0.1)
-                # else:
-                #     inner_opt = torch.optim.Adam(inner_param, lr = self.args.learning_rate)
+                if self.args.optimizer == "SGD":
+                    if iteration > int(self.args.iterations * 0.8):
+                        lr_rate *= 0.1
+                    inner_opt = torch.optim.SGD(inner_param, lr = lr_rate, weight_decay = self.args.weight_decay, momentum = self.args.momentum)
+
+                else:
+                    if iteration > int(self.args.iterations * 0.75):
+                        inner_opt = torch.optim.Adam(inner_param, lr = self.args.learning_rate * 0.01)
+                    elif iteration > int(self.args.iterations * 0.5):
+                        inner_opt = torch.optim.Adam(inner_param, lr = self.args.learning_rate * 0.1)
+                    else:
+                        inner_opt = torch.optim.Adam(inner_param, lr = self.args.learning_rate)
 
                 di_z, ds_z = self.zi_model(mtr_samples), inner_zs_model(mtr_samples)
                 predicted_classes = inner_classifier(di_z, ds_z)
@@ -392,11 +402,10 @@ class Trainer_DSDI:
                 logging.info('Train set: Iteration: [{}/{}]\tAccuracy: {}/{} ({:.2f}%)\tLoss: {:.6f}'.format(iteration, self.args.iterations,
                     n_class_corrected, total_class_samples, 100. * n_class_corrected / total_class_samples, total_classification_loss / total_class_samples))
                 self.evaluate(iteration)
-                
+            
             n_class_corrected = 0
             n_domain_class_corrected = 0
             n_zs_domain_class_corrected = 0
-
             total_dc_loss = 0
             total_classification_loss = 0
             total_zsc_loss = 0
@@ -417,7 +426,6 @@ class Trainer_DSDI:
             for iteration, (samples, labels, domain_labels) in enumerate(self.val_loader):
                 samples, labels = samples.to(self.device), labels.to(self.device)
                 di_z, ds_z = self.zi_model(samples), self.zs_model(samples)
-                
                 predicted_classes = self.classifier(di_z, ds_z)
                 classification_loss = self.criterion(predicted_classes, labels)
                 total_classification_loss += classification_loss.item()
@@ -430,36 +438,37 @@ class Trainer_DSDI:
         logging.info('Val set: Accuracy: {}/{} ({:.2f}%)\tLoss: {:.6f}'.format(n_class_corrected, len(self.val_loader.dataset),
             100. * n_class_corrected / len(self.val_loader.dataset), total_classification_loss / len(self.val_loader.dataset)))
 
-        # val_acc = n_class_corrected / len(self.val_loader.dataset)
+        val_acc = n_class_corrected / len(self.val_loader.dataset)
         val_loss = total_classification_loss / len(self.val_loader.dataset)
-        
+
         self.zi_model.train()
         self.zs_model.train()
-        # self.model.bn_eval()
         self.classifier.train()
         self.zs_domain_classifier.train()
         self.domain_discriminator.train()
 
-        # if self.val_acc_max < val_acc:
-        #     self.val_acc_max = val_acc
-        #     torch.save({
-        #         'zi_model_state_dict': self.zi_model.state_dict(),
-        #         'zs_model_state_dict': self.zs_model.state_dict(),
-        #         'classifier_state_dict': self.classifier.state_dict(),
-        #         'zs_domain_classifier_state_dict': self.zs_domain_classifier.state_dict(),
-        #         'domain_discriminator_state_dict': self.domain_discriminator.state_dict(),
-        #     }, self.checkpoint_name + '.pt')
 
-        if self.val_loss_min > val_loss:
-            self.val_loss_min = val_loss
-            torch.save({
-                'zi_model_state_dict': self.zi_model.state_dict(),
-                'zs_model_state_dict': self.zs_model.state_dict(),
-                'classifier_state_dict': self.classifier.state_dict(),
-                'zs_domain_classifier_state_dict': self.zs_domain_classifier.state_dict(),
-                'domain_discriminator_state_dict': self.domain_discriminator.state_dict(),
-            }, self.checkpoint_name + '.pt')
-    
+        if self.args.val_size != 0:
+            if self.val_loss_min > val_loss:
+                self.val_loss_min = val_loss
+                torch.save({
+                    'zi_model_state_dict': self.zi_model.state_dict(),
+                    'zs_model_state_dict': self.zs_model.state_dict(),
+                    'classifier_state_dict': self.classifier.state_dict(),
+                    'zs_domain_classifier_state_dict': self.zs_domain_classifier.state_dict(),
+                    'domain_discriminator_state_dict': self.domain_discriminator.state_dict(),
+                }, self.checkpoint_name + '.pt')
+        else:
+            if self.val_acc_max < val_acc:
+                self.val_acc_max = val_acc
+                torch.save({
+                    'zi_model_state_dict': self.zi_model.state_dict(),
+                    'zs_model_state_dict': self.zs_model.state_dict(),
+                    'classifier_state_dict': self.classifier.state_dict(),
+                    'zs_domain_classifier_state_dict': self.zs_domain_classifier.state_dict(),
+                    'domain_discriminator_state_dict': self.domain_discriminator.state_dict(),
+                }, self.checkpoint_name + '.pt')
+
     def test(self):
         checkpoint = torch.load(self.checkpoint_name + '.pt')
         self.zi_model.load_state_dict(checkpoint['zi_model_state_dict'])
@@ -467,7 +476,6 @@ class Trainer_DSDI:
         self.classifier.load_state_dict(checkpoint['classifier_state_dict'])
         self.zs_domain_classifier.load_state_dict(checkpoint['zs_domain_classifier_state_dict'])
         self.domain_discriminator.load_state_dict(checkpoint['domain_discriminator_state_dict'])
-
         self.zi_model.eval()
         self.zs_model.eval()
         self.classifier.eval()
