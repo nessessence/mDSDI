@@ -5,28 +5,12 @@ from matplotlib import pyplot as plt
 from sklearn.manifold import TSNE
 import pickle
 
-def plot_TNSE(X_2d_tr, tr_labels, label_target_names, filename, title_name, legend = False):
+def plot_TNSE(X_2d_tr, tr_labels, label_target_names, filename):
     colors=['red','green','blue','black','brown','grey','orange','yellow','pink','cyan','magenta']
     plt.figure(figsize=(16, 16))
     for i, label in zip(range(len(label_target_names)), label_target_names):
-        if label == 0:
-            plt.scatter(X_2d_tr[tr_labels == i, 0], X_2d_tr[tr_labels == i, 1], c=colors[i], marker='.', label="dog")
-        if label == 1:
-            plt.scatter(X_2d_tr[tr_labels == i, 0], X_2d_tr[tr_labels == i, 1], c=colors[i], marker='.', label="elephant")
-        if label == 2:
-            plt.scatter(X_2d_tr[tr_labels == i, 0], X_2d_tr[tr_labels == i, 1], c=colors[i], marker='.', label="giraffe")
-        if label == 3:
-            plt.scatter(X_2d_tr[tr_labels == i, 0], X_2d_tr[tr_labels == i, 1], c=colors[i], marker='.', label="guitar")
-        if label == 4:
-            plt.scatter(X_2d_tr[tr_labels == i, 0], X_2d_tr[tr_labels == i, 1], c=colors[i], marker='.', label="horse")
-        if label == 5:
-            plt.scatter(X_2d_tr[tr_labels == i, 0], X_2d_tr[tr_labels == i, 1], c=colors[i], marker='.', label="house")
-        if label == 6:
-            plt.scatter(X_2d_tr[tr_labels == i, 0], X_2d_tr[tr_labels == i, 1], c=colors[i], marker='.', label="person")
+        plt.scatter(X_2d_tr[tr_labels == i, 0], X_2d_tr[tr_labels == i, 1], c = colors[i], marker = '.', label = label)
 
-    if legend:
-        plt.legend(loc=2, fontsize = 'x-small')
-    # plt.title(title_name)
     plt.savefig(filename)
 
 def tsne_plot(Zi_out, Zs_out, labels, domain_labels, dir_name):
@@ -51,17 +35,17 @@ def tsne_plot(Zi_out, Zs_out, labels, domain_labels, dir_name):
     Zi_2d = tsne_model.fit_transform(Zi_out)
     Zs_2d = tsne_model.fit_transform(Zs_out)
     
-    plot_TNSE(Z_2d, labels, label_target_names, dir_name + 'Z_class_tSNE.png', title_name = "DSDI (Classes)", legend = True)
-    plot_TNSE(Z_2d, domain_labels, domain_label_target_names, dir_name + 'Z_domain_tSNE.png', title_name = "DSDI (Domains)")
+    plot_TNSE(Z_2d, labels, label_target_names, dir_name + 'Z_class_tSNE.png')
+    plot_TNSE(Z_2d, domain_labels, domain_label_target_names, dir_name + 'Z_domain_tSNE.png')
 
-    plot_TNSE(Zi_2d, labels, label_target_names, dir_name + 'Zi_class_tSNE.png', title_name = "DI (Classes)", legend = True)
-    plot_TNSE(Zi_2d, domain_labels, domain_label_target_names, dir_name + 'Zi_domain_tSNE.png', title_name = "DI (Domains)")
+    plot_TNSE(Zi_2d, labels, label_target_names, dir_name + 'Zi_class_tSNE.png')
+    plot_TNSE(Zi_2d, domain_labels, domain_label_target_names, dir_name + 'Zi_domain_tSNE.png')
 
-    plot_TNSE(Zs_2d, labels, label_target_names, dir_name + 'Zs_class_tSNE.png', title_name = "DS (Classes)", legend = True)
-    plot_TNSE(Zs_2d, domain_labels, domain_label_target_names, dir_name + 'Zs_domain_tSNE.png', title_name = "DS (Domains)")
+    plot_TNSE(Zs_2d, labels, label_target_names, dir_name + 'Zs_class_tSNE.png')
+    plot_TNSE(Zs_2d, domain_labels, domain_label_target_names, dir_name + 'Zs_domain_tSNE.png')
 
 def main():
-    dir_name = "algorithms/DI_debug/results/plots/PACS_photo_1/"
+    dir_name = "algorithms/mDSDI/results/plots/PACS_art_1/"
     with open (dir_name + 'Zi_out.pkl', 'rb') as fp:
         Zi_out = pickle.load(fp)
     with open (dir_name + 'Zi_out.pkl', 'rb') as fp:

@@ -1,6 +1,7 @@
 import os
 import logging
 import shutil
+import pickle
 import numpy as np
 import pandas as pd
 import torch
@@ -55,18 +56,19 @@ class Trainer_ERM:
         self.device = device
         self.writer = self.set_writer(log_dir = "algorithms/" + self.args.algorithm + "/results/tensorboards/" + self.args.exp_name + "_" + exp_idx + "/")
         self.checkpoint_name = "algorithms/" + self.args.algorithm + "/results/checkpoints/" + self.args.exp_name + "_" + exp_idx
+        self.plot_dir = "algorithms/" + self.args.algorithm + "/results/plots/" + self.args.exp_name + "_" + exp_idx + "/"
 
         src_tr_sample_paths, src_tr_class_labels, src_val_sample_paths, src_val_class_labels = set_tr_val_samples_labels(self.args.src_train_meta_filenames, self.args.val_size)
         test_sample_paths, test_class_labels = set_test_samples_labels(self.args.target_test_meta_filenames)
         self.train_loaders = []
         for i in range(self.args.n_domain_classes):
-            self.train_loaders.append(DataLoader(dataloader_factory.get_train_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = src_tr_sample_paths[i], class_labels = src_tr_class_labels[i]), batch_size = self.args.batch_size, shuffle = True))
+            self.train_loaders.append(DataLoader(dataloader_factory.get_train_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = src_tr_sample_paths[i], class_labels = src_tr_class_labels[i], domain_label = i), batch_size = self.args.batch_size, shuffle = True))
 
         if self.args.val_size != 0:
             self.val_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = src_val_sample_paths, class_labels = src_val_class_labels), batch_size = self.args.batch_size, shuffle = True)
         else:
             self.val_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = test_sample_paths, class_labels = test_class_labels), batch_size = self.args.batch_size, shuffle = True)
-        
+
         self.test_loader = DataLoader(dataloader_factory.get_test_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = test_sample_paths, class_labels = test_class_labels), batch_size = self.args.batch_size, shuffle = True)
         self.model = model_factory.get_model(self.args.model)().to(self.device)
         self.classifier = Classifier(self.args.feature_dim, self.args.n_classes).to(self.device)
@@ -97,6 +99,57 @@ class Trainer_ERM:
         shutil.rmtree(log_dir)
         return SummaryWriter(log_dir)
 
+    def save_plot(self):
+        checkpoint = torch.load(self.checkpoint_name + '.pt')
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        self.classifier.load_state_dict(checkpoint['classifier_state_dict'])
+        self.model.eval()
+        self.classifier.eval()
+
+        Z_out, Y_out, Y_domain_out = [], [], []
+        Z_test, Y_test, Y_domain_test = [], [], []
+
+        with torch.no_grad():
+            self.train_iter_loaders = []
+            for train_loader in self.train_loaders:
+                self.train_iter_loaders.append(iter(train_loader))
+                
+            for d_idx in range(len(self.train_iter_loaders)):
+                train_loader = self.train_iter_loaders[d_idx]
+                for idx in range(len(train_loader)):
+                    samples, labels, domain_labels = train_loader.next()
+                    samples = samples.to(self.device)
+                    labels = labels.to(self.device)
+                    domain_labels = domain_labels.to(self.device)
+                    z = self.model(samples)
+                    Z_out += z.tolist()
+                    Y_out += labels.tolist() 
+                    Y_domain_out += domain_labels.tolist()
+
+            for iteration, (samples, labels, domain_labels) in enumerate(self.test_loader):
+                samples, labels = samples.to(self.device), labels.to(self.device)
+                z = self.model(samples)
+                Z_test += z.tolist()
+                Y_test += labels.tolist() 
+                Y_domain_test += domain_labels.tolist()
+        
+        
+        if not os.path.exists(self.plot_dir):
+            os.mkdir(self.plot_dir)
+        with open(self.plot_dir + 'Z_out.pkl', 'wb') as fp:
+            pickle.dump(Z_out, fp)
+        with open(self.plot_dir + 'Y_out.pkl', 'wb') as fp:
+            pickle.dump(Y_out, fp)
+        with open(self.plot_dir + 'Y_domain_out.pkl', 'wb') as fp:
+            pickle.dump(Y_domain_out, fp)
+
+        with open(self.plot_dir + 'Z_test.pkl', 'wb') as fp:
+            pickle.dump(Z_test, fp)
+        with open(self.plot_dir + 'Y_test.pkl', 'wb') as fp:
+            pickle.dump(Y_test, fp)
+        with open(self.plot_dir + 'Y_domain_test.pkl', 'wb') as fp:
+            pickle.dump(Y_domain_test, fp)
+
     def train(self):
         self.model.train()
         self.classifier.train()
@@ -116,7 +169,7 @@ class Trainer_ERM:
                     self.train_iter_loaders[idx] = iter(self.train_loaders[idx])
                 train_loader = self.train_iter_loaders[idx]
 
-                itr_samples, itr_labels = train_loader.next()
+                itr_samples, itr_labels, itr_domain_labels = train_loader.next()
                 samples.append(itr_samples)
                 labels.append(itr_labels)
             
@@ -154,7 +207,7 @@ class Trainer_ERM:
         n_class_corrected = 0
         total_classification_loss = 0
         with torch.no_grad():
-            for iteration, (samples, labels) in enumerate(self.val_loader):
+            for iteration, (samples, labels, domain_labels) in enumerate(self.val_loader):
                 samples, labels = samples.to(self.device), labels.to(self.device)
                 predicted_classes = self.classifier(self.model(samples))
                 classification_loss = self.criterion(predicted_classes, labels)
@@ -191,7 +244,7 @@ class Trainer_ERM:
 
         n_class_corrected = 0
         with torch.no_grad():
-            for iteration, (samples, labels) in enumerate(self.test_loader):
+            for iteration, (samples, labels, domain_labels) in enumerate(self.test_loader):
                 samples, labels = samples.to(self.device), labels.to(self.device)
                 predicted_classes = self.classifier(self.model(samples))
                 _, predicted_classes = torch.max(predicted_classes, 1)
