@@ -26,7 +26,7 @@ done
 where the parameters are the following:
 - `<cpu_index>`: CPU index. E.g., `<cpu_index> = "1"`
 - `<config_path>`: path stored configuration hyper-parameters. E.g., `<config_path> = "algorithms/mDSDI/configs/PACS_photo.json"`
-- `<gpu_index>`: GPU index.E.g., `<gpu_index> = "0"`
+- `<gpu_index>`: GPU index. E.g., `<gpu_index> = "0"`
 
 **Note:** Select different settings by editing in `/configs/..json`, logging results are stored in `/results/logs/`
 
