@@ -16,8 +16,8 @@ bash setup.sh
 
 <img src="gallery/dataset.png" width="50%" height="50%">
 
-### To train model:
-Train with five different seeds:
+### To run experiments:
+Run with five different seeds:
 ```sh
 for i in {1..5}; do
      taskset -c <cpu_index> python main.py --config <config_path> --exp_idx $i --gpu_idx <gpu_index>
