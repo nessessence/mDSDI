@@ -1,5 +1,5 @@
 # meta-Domain Specific-Domain Invariant (mDSDI)
-Repository for the ICML21 submission: ["Exploiting Domain-Specific Features to Enhance Domain Generalization"](https://drive.google.com/file/d/1xIBgmrmKexAgKscnp9Z2hcjVQQbwzeM2/view?usp=sharing).
+Repository for the ICML21 submission: ["Exploiting Domain-Specific Features to Enhance Domain Generalization"](https://drive.google.com/file/d/1wU0BN0L-yH05i_Hc5UYeCwWH3Sim96W2/view?usp=sharing).
 ![framework](gallery/framework.png)
 
 ## Guideline
