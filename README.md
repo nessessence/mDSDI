@@ -30,7 +30,7 @@ where the parameters are the following:
 
 **Note:** Select different settings by editing in `/configs/..json`, logging results are stored in `/results/logs/`
 
-<img src="gallery/framework.png">
+<img src="gallery/framework.png" width="50%" height="50%">
 <img src="gallery/result.png">
 
 ### To visualize objective functions:
@@ -46,6 +46,17 @@ where `<logdir>`: absolute path stored TensorBoard results. E.g., `<logdir> = "/
 
 ```sh
 python utils/tSNE_plot.py --plotdir <plotdir>
+```
+where `<plotdir>`: path stored results to plot. E.g., `<plotdir> = "algorithms/mDSDI/results/plots/PACS_photo_1/"`
+
+<img src="gallery/tSNE.png" width="50%" height="50%">
+
+**Note:** Results are stored in `/results/plots/`
+
+### Running on ["DomainBed"](https://github.com/facebookresearch/DomainBed) library:
+
+```sh
+python DomainBed/tSNE_plot.py --plotdir <plotdir>
 ```
 where `<plotdir>`: path stored results to plot. E.g., `<plotdir> = "algorithms/mDSDI/results/plots/PACS_photo_1/"`
 
