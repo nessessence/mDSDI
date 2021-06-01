@@ -1,5 +1,5 @@
 # meta-Domain Specific-Domain Invariant (mDSDI)
-Repository for the ICML21 submission: ["Exploiting Domain-Specific Features to Enhance Domain Generalization"]().
+Repository for the NeurIPS | 2021 submission: ["Exploiting Domain-Specific Features to Enhance Domain Generalization"]().
 ![framework](gallery/theoretical_insights.png)
 
 ## Guideline
