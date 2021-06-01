@@ -9,7 +9,7 @@ Install prerequisite packages:
 python -m pip install -r requirements.txt
 ```
 
-Download, unzip the datasets and pretrained models:
+Download and unzip the datasets:
 ```sh
 bash setup.sh
 ```

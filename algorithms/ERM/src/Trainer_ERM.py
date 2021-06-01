@@ -6,8 +6,6 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-from torch.optim import lr_scheduler
-from torch.optim.lr_scheduler import StepLR, MultiStepLR
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
@@ -74,24 +72,11 @@ class Trainer_ERM:
         self.classifier = Classifier(self.args.feature_dim, self.args.n_classes).to(self.device)
 
         optimizer_params = list(self.model.parameters()) + list(self.classifier.parameters())
-        self.optimizer = self.set_optimizer(self.args.optimizer, optimizer_params, self.args.learning_rate, self.args.weight_decay, self.args.momentum)
-        self.scheduler = self.set_scheduler(self.args.optimizer, self.optimizer, self.args.iterations, self.args.scheduler_step_size)
+        self.optimizer = torch.optim.Adam(optimizer_params, lr = self.args.learning_rate)
 
         self.criterion = nn.CrossEntropyLoss()
         self.val_loss_min = np.Inf
         self.val_acc_max = 0
-
-    def set_optimizer(self, optimizer_type, optimizer_params, learning_rate, weight_decay, momentum):
-        if optimizer_type == "SGD":
-            return torch.optim.SGD(optimizer_params, lr = learning_rate, weight_decay = weight_decay, momentum = momentum)
-        elif optimizer_type == "Adam":
-            return torch.optim.Adam(optimizer_params, lr = learning_rate)
-    
-    def set_scheduler(self, optimizer_type, optimizer, iterations, scheduler_step_size):
-        if optimizer_type == "SGD":
-            return StepLR(optimizer, step_size = iterations * scheduler_step_size[0])
-        elif optimizer_type == "Adam":
-            return MultiStepLR(optimizer, milestones = [x * iterations for x in scheduler_step_size])
 
     def set_writer(self, log_dir):
         if not os.path.exists(log_dir):
@@ -187,7 +172,6 @@ class Trainer_ERM:
             self.optimizer.zero_grad()
             classification_loss.backward()
             self.optimizer.step()
-            self.scheduler.step()
 
             if iteration % self.args.step_eval == 0:
                 self.writer.add_scalar('Accuracy/train', 100. * n_class_corrected / total_samples, iteration)

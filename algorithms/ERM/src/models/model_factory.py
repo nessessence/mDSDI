@@ -1,10 +1,10 @@
-from algorithms.ERM.src.models import resnet
-from algorithms.ERM.src.models import mnistnet
+from algorithms.ERM.src.models.mnistnet import MNIST_CNN, Color_MNIST_CNN
+from algorithms.ERM.src.models.resnet import ResNet
 
 nets_map = {
-    'mnistnet': mnistnet.mnistnet,
-    'resnet18': resnet.resnet18,
-    'resnet50': resnet.resnet50
+    'mnistnet': MNIST_CNN,
+    'cmnistnet': Color_MNIST_CNN,
+    'resnet50': ResNet
 }
 
 def get_model(name):

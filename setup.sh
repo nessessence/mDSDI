@@ -1,7 +1,3 @@
-#Download pretrained models
-wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1bDey1GKP528wWfuLqGev5RBIUbHPoOxO' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1bDey1GKP528wWfuLqGev5RBIUbHPoOxO" -O pretrained_models.zip && rm -rf /tmp/cookies.txt
-unzip pretrained_models.zip
-rm -rf pretrained_models.zip
 #Download the datasets
 wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1W_6aYi_DR_02j0Z01LsL1rCe7OS5B0pE' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1W_6aYi_DR_02j0Z01LsL1rCe7OS5B0pE" -O data.zip && rm -rf /tmp/cookies.txt
 unzip data.zip
