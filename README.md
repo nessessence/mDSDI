@@ -53,13 +53,14 @@ where `<plotdir>`: path stored results to plot. E.g., `<plotdir> = "algorithms/m
 
 **Note:** Results are stored in `/results/plots/`
 
-### Running on ["DomainBed"](https://github.com/facebookresearch/DomainBed) library:
+### To run on ["DomainBed"](https://github.com/facebookresearch/DomainBed) library:
 
 ```sh
-python DomainBed/tSNE_plot.py --plotdir <plotdir>
+cd DomainBed/
+python -m domainbed.scripts.train --data_dir=../data/ --algorithm MDSDI --dataset <dataset_name> --test_env <env_idx>
 ```
-where `<plotdir>`: path stored results to plot. E.g., `<plotdir> = "algorithms/mDSDI/results/plots/PACS_photo_1/"`
+where the parameters are the following:
+- `<dataset_name>`: name of 5 benchmark datasets, including: RotatedMNIST | VLCS | OfficeHome | PACS | DomainNet. E.g., `<dataset_name> = PACS`
+- `<test_env>`: index of the target domain. E.g., `<dataset_name> = 0`
 
-<img src="gallery/tSNE.png" width="50%" height="50%">
-
-**Note:** Results are stored in `/results/plots/`
+**Note:** Results are stored in `DomainBed/results/train_output/out.txt`
