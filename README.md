@@ -31,7 +31,6 @@ where the parameters are the following:
 **Note:** Select different settings by editing in `/configs/..json`, logging results are stored in `/results/logs/`
 
 <img src="gallery/framework.png" width="50%" height="50%">
-<img src="gallery/result.png">
 
 ### To visualize objective functions:
 
@@ -62,5 +61,7 @@ python -m domainbed.scripts.train --data_dir=../data/ --algorithm MDSDI --datase
 where the parameters are the following:
 - `<dataset_name>`: name of 5 benchmark datasets, including: RotatedMNIST | VLCS | OfficeHome | PACS | DomainNet. E.g., `<dataset_name> = PACS`
 - `<test_env>`: index of the target domain. E.g., `<dataset_name> = 0`
+
+<img src="gallery/result.png">
 
 **Note:** Results are stored in `DomainBed/results/train_output/out.txt`
