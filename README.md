@@ -1,6 +1,6 @@
 # meta-Domain Specific-Domain Invariant (mDSDI)
 Repository for the ICML21 submission: ["Exploiting Domain-Specific Features to Enhance Domain Generalization"](https://drive.google.com/file/d/1wU0BN0L-yH05i_Hc5UYeCwWH3Sim96W2/view?usp=sharing).
-![framework](gallery/framework.png)
+![framework](gallery/theoretical_insights.png)
 
 ## Guideline
 ### To prepare:
@@ -19,7 +19,7 @@ bash setup.sh
 ### To run experiments:
 Run with five different seeds:
 ```sh
-for i in {1..5}; do
+for i in {1..3}; do
      taskset -c <cpu_index> python main.py --config <config_path> --exp_idx $i --gpu_idx <gpu_index>
 done
 ```
@@ -29,6 +29,9 @@ where the parameters are the following:
 - `<gpu_index>`: GPU index. E.g., `<gpu_index> = "0"`
 
 **Note:** Select different settings by editing in `/configs/..json`, logging results are stored in `/results/logs/`
+
+<img src="gallery/framework.png">
+<img src="gallery/result.png">
 
 ### To visualize objective functions:
 

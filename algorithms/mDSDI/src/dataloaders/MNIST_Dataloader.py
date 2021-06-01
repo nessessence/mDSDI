@@ -7,9 +7,7 @@ class MNISTDataloader(Dataset):
     def __init__(self, src_path, sample_paths, class_labels, domain_label = -1):
         self.image_transformer = transforms.Compose([
             transforms.Resize((28, 28)),
-            # transforms.RandomCrop(28, padding = 4),
-            transforms.ToTensor(),
-            transforms.Normalize([0.1307], [0.3081]),
+            transforms.ToTensor()
         ])
         self.src_path = src_path
         self.domain_label = domain_label
@@ -33,6 +31,5 @@ class MNIST_Test_Dataloader(MNISTDataloader):
         super().__init__(*args, **xargs)
         self.image_transformer = transforms.Compose([
             transforms.Resize((28, 28)),
-            transforms.ToTensor(),
-            transforms.Normalize([0.1307], [0.3081]),
+            transforms.ToTensor()
         ])

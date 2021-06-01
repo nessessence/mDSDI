@@ -3,21 +3,27 @@ from torch.utils.data import Dataset
 from PIL import Image
 import torchvision.transforms as transforms
 
-class FMNISTDataloader(Dataset):
+from PIL import ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+
+class StandardDataloader(Dataset):
     def __init__(self, src_path, sample_paths, class_labels, domain_label = -1):
         self.image_transformer = transforms.Compose([
-            transforms.Resize((28, 28)),
-            # transforms.RandomCrop(28, padding = 4),
-            # transforms.RandomHorizontalFlip(),
+            # transforms.Resize((224,224)),
+            transforms.RandomResizedCrop(224, scale=(0.7, 1.0)),
+            transforms.RandomHorizontalFlip(),
+            transforms.ColorJitter(0.3, 0.3, 0.3, 0.3),
+            transforms.RandomGrayscale(),
             transforms.ToTensor(),
-            transforms.Normalize([0.2860], [0.3530]),
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
         self.src_path = src_path
         self.domain_label = domain_label
         self.sample_paths, self.class_labels = sample_paths, class_labels
-        
+
     def get_image(self, sample_path):
-        img = Image.open(sample_path)
+        img = Image.open(sample_path).convert('RGB')
         return self.image_transformer(img)
 
     def __len__(self):
@@ -29,11 +35,12 @@ class FMNISTDataloader(Dataset):
         
         return sample, class_label, self.domain_label
 
-class FMNIST_Test_Dataloader(FMNISTDataloader):
+class StandardValDataloader(StandardDataloader):
     def __init__(self, *args, **xargs):
         super().__init__(*args, **xargs)
         self.image_transformer = transforms.Compose([
-            transforms.Resize((28, 28)),
+            transforms.Resize((224,224)),
             transforms.ToTensor(),
-            transforms.Normalize([0.2860], [0.3530]),
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])

@@ -6,8 +6,6 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-from torch.optim import lr_scheduler
-from torch.optim.lr_scheduler import StepLR, MultiStepLR
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
@@ -16,21 +14,14 @@ from algorithms.mDSDI.src.models import model_factory
 import copy
 
 class GradReverse(torch.autograd.Function):
-    iter_num = 0
-    alpha = 10
-    low = 0.0
-    high = 1.0
 
     @staticmethod
     def forward(ctx, x):
-        GradReverse.iter_num += 1
         return x.view_as(x)
 
     @staticmethod
     def backward(ctx, grad_output):
-        coeff = np.float(2.0 * (GradReverse.high - GradReverse.low) / (1.0 + np.exp(-GradReverse.alpha * GradReverse.iter_num / GradReverse.max_iter))
-                         - (GradReverse.high - GradReverse.low) + GradReverse.low)
-        return -coeff * grad_output
+        return -grad_output
 
 class Domain_Discriminator(nn.Module):
     def __init__(self, feature_dim, domain_classes):
@@ -124,7 +115,6 @@ class Trainer_mDSDI:
 
         src_tr_sample_paths, src_tr_class_labels, src_val_sample_paths, src_val_class_labels = set_tr_val_samples_labels(self.args.src_train_meta_filenames, self.args.val_size)
         test_sample_paths, test_class_labels = set_test_samples_labels(self.args.target_test_meta_filenames)
-        GradReverse.max_iter = self.args.iterations
         self.train_loaders = []
         for i in range(self.args.n_domain_classes):
             self.train_loaders.append(DataLoader(dataloader_factory.get_train_dataloader(self.args.dataset)(src_path = self.args.src_data_path, sample_paths = src_tr_sample_paths[i], class_labels = src_tr_class_labels[i], domain_label = i), batch_size = self.args.batch_size, shuffle = True))
@@ -143,29 +133,14 @@ class Trainer_mDSDI:
         self.domain_discriminator = Domain_Discriminator(feature_dim = self.args.feature_dim, domain_classes = self.args.n_domain_classes).to(self.device)
         
         optimizer_params = list(self.zi_model.parameters()) + list(self.zs_model.parameters()) + list(self.classifier.parameters()) + list(self.domain_discriminator.parameters()) + list(self.zs_domain_classifier.parameters())
-        self.optimizer = self.set_optimizer(self.args.optimizer, optimizer_params, self.args.learning_rate, self.args.weight_decay, self.args.momentum)
-        self.scheduler = self.set_scheduler(self.args.optimizer, self.optimizer, self.args.iterations, self.args.scheduler_step_size)
+        self.optimizer = torch.optim.Adam(optimizer_params, lr = self.args.learning_rate)
 
         meta_optimizer_params = list(self.zs_model.parameters()) + list(self.classifier.parameters())
-        self.meta_optimizer = self.set_optimizer(self.args.optimizer, meta_optimizer_params, self.args.learning_rate, self.args.weight_decay, self.args.momentum)
-        self.meta_scheduler = self.set_scheduler(self.args.optimizer, self.meta_optimizer, self.args.iterations, self.args.scheduler_step_size)
-
+        self.meta_optimizer = torch.optim.Adam(meta_optimizer_params, lr = self.args.learning_rate)
         self.criterion = nn.CrossEntropyLoss()
         self.reconstruction_criterion = nn.MSELoss()
         self.val_loss_min = np.Inf
         self.val_acc_max = 0
-
-    def set_optimizer(self, optimizer_type, optimizer_params, learning_rate, weight_decay, momentum):
-        if optimizer_type == "SGD":
-            return torch.optim.SGD(optimizer_params, lr = learning_rate, weight_decay = weight_decay, momentum = momentum)
-        elif optimizer_type == "Adam":
-            return torch.optim.Adam(optimizer_params, lr = learning_rate)
-    
-    def set_scheduler(self, optimizer_type, optimizer, iterations, scheduler_step_size):
-        if optimizer_type == "SGD":
-            return StepLR(optimizer, step_size = iterations * scheduler_step_size[0])
-        elif optimizer_type == "Adam":
-            return MultiStepLR(optimizer, milestones = [x * iterations for x in scheduler_step_size])
 
     def set_writer(self, log_dir):
         if not os.path.exists(log_dir):
@@ -317,7 +292,6 @@ class Trainer_mDSDI:
             self.optimizer.zero_grad()
             total_loss.backward()
             self.optimizer.step()
-            self.scheduler.step()
 
             #Meta-training
             self.meta_optimizer.zero_grad()
@@ -336,20 +310,8 @@ class Trainer_mDSDI:
                 inner_classifier = copy.deepcopy(self.classifier)
                     
                 inner_param = list(inner_zs_model.parameters()) + list(inner_classifier.parameters())
-                lr_rate = self.args.learning_rate
 
-                if self.args.optimizer == "SGD":
-                    if iteration > int(self.args.iterations * 0.8):
-                        lr_rate *= 0.1
-                    inner_opt = torch.optim.SGD(inner_param, lr = lr_rate, weight_decay = self.args.weight_decay, momentum = self.args.momentum)
-
-                else:
-                    if iteration > int(self.args.iterations * 0.75):
-                        inner_opt = torch.optim.Adam(inner_param, lr = self.args.learning_rate * 0.01)
-                    elif iteration > int(self.args.iterations * 0.5):
-                        inner_opt = torch.optim.Adam(inner_param, lr = self.args.learning_rate * 0.1)
-                    else:
-                        inner_opt = torch.optim.Adam(inner_param, lr = self.args.learning_rate)
+                inner_opt = torch.optim.Adam(inner_param, lr = self.args.learning_rate)
 
                 di_z, ds_z = self.zi_model(mtr_samples), inner_zs_model(mtr_samples)
                 predicted_classes = inner_classifier(di_z, ds_z)
@@ -387,7 +349,6 @@ class Trainer_mDSDI:
 
             total_class_samples = total_samples + total_meta_samples
             self.meta_optimizer.step()
-            self.meta_scheduler.step()
                         
             if iteration % self.args.step_eval == 0:
                 self.writer.add_scalar('Accuracy/train', 100. * n_class_corrected / total_class_samples, iteration)

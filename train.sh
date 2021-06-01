@@ -9,4 +9,4 @@
 # rm -r algorithms/mDSDI/results/logs/*
 # rm -r algorithms/mDSDI/results/plots/*
 # rm -r algorithms/mDSDI/results/tensorboards/*
-taskset -c "51" python main.py --config "algorithms/ERM/configs/Rotated_75_MNIST.json" --exp_idx "0" --gpu_idx "0"
+taskset -c "51" python main.py --config "algorithms/mDSDI/configs/PACS_photo.json" --exp_idx "0" --gpu_idx "0"
