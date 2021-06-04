@@ -1,5 +1,5 @@
 # meta-Domain Specific-Domain Invariant (mDSDI)
-Repository for the NeurIPS | 2021 submission: ["Exploiting Domain-Specific Features to Enhance Domain Generalization"]().
+Repository for the NeurIPS | 2021 submission: ["Exploiting Domain-Specific Features to Enhance Domain Generalization"](https://drive.google.com/file/d/1JKu08tTcl6Qn83yKCuFcOvTRW73vTrDx/view?usp=sharing).
 ![framework](gallery/theoretical_insights.png)
 
 ## Guideline
