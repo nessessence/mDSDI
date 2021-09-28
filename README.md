@@ -1,5 +1,7 @@
 # meta-Domain Specific-Domain Invariant (mDSDI)
-Repository for the pre-print: ["Exploiting Domain-Specific Features to Enhance Domain Generalization"](https://drive.google.com/file/d/1JKu08tTcl6Qn83yKCuFcOvTRW73vTrDx/view?usp=sharing).
+Source code implementation for the paper:
+
+Manh-Ha Bui, Toan Tran, Anh Tuan Tran, Dinh Phung. ["Exploiting Domain-Specific Features to Enhance Domain Generalization."](https://nips.cc/Conferences/2021/Dates) Thirty-fifth Conference on Neural Information Processing Systems (NeurIPS | 2021).
 ![framework](gallery/theoretical_insights.png)
 
 ## Guideline
