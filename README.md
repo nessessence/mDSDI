@@ -54,7 +54,7 @@ where `<plotdir>`: path stored results to plot. E.g., `<plotdir> = "algorithms/m
 
 **Note:** Results are stored in `/results/plots/`
 
-### To run on ["DomainBed, Ishaan and David, 2021)"](https://github.com/facebookresearch/DomainBed) library:
+### To run on ["DomainBed, Ishaan and David, 2021"](https://github.com/facebookresearch/DomainBed) library:
 
 ```sh
 cd DomainBed/
